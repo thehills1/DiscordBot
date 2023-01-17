@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using DiscordBot.Commands;
 using DiscordBot.Server;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -26,8 +27,12 @@ namespace DiscordBot
 		{
 			return _serverServices.GetOrAdd(serverId, _serverId =>
 			{
-				var serverService = _serviceProvider.GetService<ServerService>();
+				var scope = _serviceProvider.CreateScope();
+				var accessor = (ServerServiceAccessor) scope.ServiceProvider.GetService<IServerServiceAccessor>();
+
+				var serverService = scope.ServiceProvider.GetService<ServerService>();
 				serverService.Initialize(serverId);
+				accessor.SetService(serverService);
 
 				return serverService;
 			});

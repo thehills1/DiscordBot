@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace DiscordBot.Server
+namespace DiscordBot.Server.Database
 {
 	public class ServerDatabase
 	{

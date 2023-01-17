@@ -1,4 +1,5 @@
 ﻿using DiscordBot.Configs;
+using DiscordBot.Server.Commands;
 
 namespace DiscordBot.Server
 {
@@ -12,9 +13,11 @@ namespace DiscordBot.Server
 
 		public string RootServerDataPath => Path.Combine(BotEnvironment.ServersDirectoryPath, _serverId.ToString());
 
-		public ServerService() 
-		{
+		public ServerGlobalCommands ServerGlobalCommands { get; }
 
+		public ServerService(ServerGlobalCommands serverGlobalCommands) 
+		{
+			ServerGlobalCommands = serverGlobalCommands;
 		}
 
 		public void Initialize(ulong serverId)
@@ -22,6 +25,8 @@ namespace DiscordBot.Server
 			_serverId = serverId;
 
 			LoadConfig();
+
+			Console.WriteLine($"Server service for server with id: [{serverId}] was initialized.");
 		}
 
 		private void LoadConfig()

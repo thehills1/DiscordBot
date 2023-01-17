@@ -1,5 +1,7 @@
 ﻿using DiscordBot.Configs;
 using DiscordBot.Server;
+using DiscordBot.Server.Commands;
+using DiscordBot.Server.Database;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DiscordBot
@@ -18,16 +20,22 @@ namespace DiscordBot
 
 			InitializeServerServiceScope(serviceCollection);
 
-			var container = serviceCollection.BuildServiceProvider();
+			using (var container = serviceCollection.BuildServiceProvider())
+			{
+				container.GetService<ServiceManager>().Initialize();
 
-			container.GetService<ServiceManager>().Initialize();
-
-			Console.ReadKey();
+				Console.ReadKey();
+			}	
         }
 
 		public static void InitializeServerServiceScope(IServiceCollection serviceCollection)
 		{
+			serviceCollection.AddScoped<IServerServiceAccessor, ServerServiceAccessor>();
 			serviceCollection.AddScoped<ServerService>();
+			serviceCollection.AddScoped<ServerDatabaseConnector>();
+			serviceCollection.AddScoped<ServerDatabaseManager>();
+
+			serviceCollection.AddScoped<ServerGlobalCommands>();
 		}
     }
 }
