@@ -10,6 +10,6 @@
         /// <summary>
         /// Id тестового сервера, на который нужно зарегистрировать тестовые команды.
         /// </summary>
-        public ulong TestGuildId { get; set; }
+        public ulong TestServerId { get; set; }
     }
 }

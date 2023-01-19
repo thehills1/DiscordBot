@@ -5,9 +5,6 @@ namespace DiscordBot.Configs
 {
     public abstract class BaseConfig<T> : JsonSerializable<T> where T : BaseConfig<T>
     {
-		public const string ConfigsDirectory = "configs";
-		public const string BaseFileName = "config.json";
-
 		[JsonIgnore]
 		public string ConfigPath { get; private set; }
 

@@ -12,7 +12,7 @@ namespace DiscordBot.Commands
 			_serviceManager = serviceManager;
 		}
 
-		[SlashCommand("abcde", "desc")]
+		[SlashCommand("test", "desc")]
 		public async Task Test(InteractionContext context, [Option("text", "text")] string text)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands.Test(context, text);

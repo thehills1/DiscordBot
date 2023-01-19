@@ -1,90 +1,72 @@
 ﻿using DiscordBot.Commands;
-using DiscordBot.Configs;
 using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.Interactivity;
 using DSharpPlus.Interactivity.Enums;
 using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
-using Microsoft.Extensions.Logging;
 
 namespace DiscordBot
 {
 	public class Bot : IDisposable
     {
+		private readonly DiscordClient _client;
 		private readonly IServiceProvider _serviceProvider;
-		private readonly BotConfig _botConfig;
-		private readonly SalaryConfig _salaryConfig;
 
-		public static DiscordClient Client { get; private set; }
+		private ServiceManager _serviceManager;
 
-		public Bot(IServiceProvider serviceProvider, BotConfig botConfig, SalaryConfig salaryConfig)
+		public Bot(DiscordClient client, 
+			IServiceProvider serviceProvider)
         {
+			_client = client;
 			_serviceProvider = serviceProvider;
-			_botConfig = botConfig;
-			_salaryConfig = salaryConfig;
 		}
 
-		public async Task RunAsync()
+		public async void Initialize()
 		{
 			ConfigurateClient();
+			SetupCommandsRegistration();
 
-			await Client.ConnectAsync();
+			await RunAsync();
+		}
+
+		private async Task RunAsync()
+		{
+			await _client.ConnectAsync();
 			await Task.Delay(-1);
 		}
 
 		private void ConfigurateClient()
-		{
-			Client = new DiscordClient(new DiscordConfiguration
-			{
-				Token = _botConfig.Token,
-				TokenType = TokenType.Bot,
-				AutoReconnect = true,
-				MinimumLogLevel = LogLevel.Debug,
-				Intents = DiscordIntents.All
-			});
-			
-			Client.UseInteractivity(new InteractivityConfiguration()
+		{			
+			_client.UseInteractivity(new InteractivityConfiguration()
 			{
 				PollBehaviour = PollBehaviour.KeepEmojis,
 				Timeout = TimeSpan.FromSeconds(60)
 			});
 
-			SetupCommandsRegistration();
-
-			//Client.MessageUpdated += HandleMessageUpdated;
-			//Client.MessageDeleted += HandleMessageDeleted;
-			//Client.VoiceStateUpdated += HandleVoiceStateUpdated;
+			//_client.MessageUpdated += HandleMessageUpdated;
+			//_client.MessageDeleted += HandleMessageDeleted;
+			//_client.VoiceStateUpdated += HandleVoiceStateUpdated;
 		}
 
-		public void SetupCommandsRegistration()
+		private void SetupCommandsRegistration()
 		{
-			var cmds = Client.UseSlashCommands(new SlashCommandsConfiguration() { Services = _serviceProvider });
+			var cmds = _client.UseSlashCommands(new SlashCommandsConfiguration() { Services = _serviceProvider });
 
-			Client.GuildAvailable += async (s, e) =>
-			{
-				cmds.RegisterCommands<GlobalCommands>(e.Guild.Id);
-				await cmds.RefreshCommands();
-				Console.WriteLine(e.Guild.Id);
-			};
-
-			Client.GuildCreated += async (s, e) =>
-			{
-				cmds.RegisterCommands<GlobalCommands>(e.Guild.Id);
-				await cmds.RefreshCommands();
-				Console.WriteLine(e.Guild.Id);
-			};
+			_client.GuildAvailable += async (s, e) => await RegisterCommandsAndUpdate(cmds, e.Guild.Id);
+			_client.GuildCreated += async (s, e) => await RegisterCommandsAndUpdate(cmds, e.Guild.Id);
 		}
 
-		public async void Initialize()
+		private async Task RegisterCommandsAndUpdate(SlashCommandsExtension cmds, ulong guildId)
 		{
-
-
-			await RunAsync();
-		}
+			await _client.DeleteGlobalApplicationCommandAsync(1064687244281118852);
+			cmds.RegisterCommands<GlobalCommands>(guildId);
+			await cmds.RefreshCommands();
+		}	
 
 		public void Dispose()
 		{
-			Client.Dispose();
+			_client.Dispose();
 		}
 	}
 }

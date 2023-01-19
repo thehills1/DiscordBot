@@ -2,7 +2,7 @@
 {
 	public class ServerConfig : BaseConfig<ServerConfig>
 	{
-		public ulong GuildId { get; set; }
+		public ulong ServerId { get; set; }
 
 		/// <summary>
 		/// Id канала с информацией.
