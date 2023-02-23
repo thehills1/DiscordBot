@@ -1,4 +1,5 @@
-﻿using Chloe.SQLite;
+﻿using System.Linq.Expressions;
+using Chloe.SQLite;
 using DiscordBot.Database.Tables;
 
 namespace DiscordBot.Database
@@ -15,23 +16,44 @@ namespace DiscordBot.Database
 
 		public void Initialize()
 		{
-			//bool create = false;
-			//if (!File.Exists(_databaseConnector.DatabasePath))
-			//{
-			//	File.Create(_databaseConnector.DatabasePath);
-			//}
-
 			_databaseContext = _databaseConnector.GetDBContext();
 		}
 
 		public void AddOrUpdateTableDB<T>(T table) where T : BaseTable
 		{
-			throw new NotImplementedException();
+			int results = _databaseContext.Update(table);
+
+			if (results == 0)
+			{
+				_databaseContext.Insert(table);
+			}
+			else
+			{
+				_databaseContext.Update(table);
+			}
+
+			//if (table is ModeratorTable || table is DismissedModeratorTable)
+			//{
+			//	SendActualModeratorsFile();
+			//	if (table is not DismissedModeratorTable) UpdateModeratorsUsername();
+			//}
 		}	
 
-		public void RemoveTable<T>(T table) where T : BaseTable
+		public async Task RemoveTable<T>(T table) where T : BaseTable
 		{
-			throw new NotImplementedException();
+			await _databaseContext.DeleteAsync(table);
+
+			//if (table is ModeratorTable) SendActualModeratorsFile();
+		}
+
+		public async Task<List<T>> GetTablesList<T>() where T : BaseTable
+		{
+			return await _databaseContext.Query<T>().ToListAsync();
+		}
+
+		public async Task<T> GetTableDB<T>(Expression<Func<T, bool>> selector) where T : BaseTable
+		{
+			return await _databaseContext.Query<T>().FirstOrDefaultAsync(selector);
 		}
 	}
 }
