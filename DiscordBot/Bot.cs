@@ -1,10 +1,7 @@
 ﻿using DiscordBot.Commands;
 using DSharpPlus;
-using DSharpPlus.Entities;
-using DSharpPlus.Interactivity;
-using DSharpPlus.Interactivity.Enums;
-using DSharpPlus.Interactivity.Extensions;
 using DSharpPlus.SlashCommands;
+using OfficeOpenXml;
 
 namespace DiscordBot
 {
@@ -12,8 +9,6 @@ namespace DiscordBot
     {
 		private readonly DiscordClient _client;
 		private readonly IServiceProvider _serviceProvider;
-
-		private ServiceManager _serviceManager;
 
 		public Bot(DiscordClient client, 
 			IServiceProvider serviceProvider)
@@ -24,29 +19,11 @@ namespace DiscordBot
 
 		public async void Initialize()
 		{
-			ConfigurateClient();
+			ExcelPackage.LicenseContext = LicenseContext.Commercial;
+
 			SetupCommandsRegistration();
 
 			await RunAsync();
-		}
-
-		private async Task RunAsync()
-		{
-			await _client.ConnectAsync();
-			await Task.Delay(-1);
-		}
-
-		private void ConfigurateClient()
-		{			
-			_client.UseInteractivity(new InteractivityConfiguration()
-			{
-				PollBehaviour = PollBehaviour.KeepEmojis,
-				Timeout = TimeSpan.FromSeconds(60)
-			});
-
-			//_client.MessageUpdated += HandleMessageUpdated;
-			//_client.MessageDeleted += HandleMessageDeleted;
-			//_client.VoiceStateUpdated += HandleVoiceStateUpdated;
 		}
 
 		private void SetupCommandsRegistration()
@@ -59,9 +36,14 @@ namespace DiscordBot
 
 		private async Task RegisterCommandsAndUpdate(SlashCommandsExtension cmds, ulong guildId)
 		{
-			await _client.DeleteGlobalApplicationCommandAsync(1064687244281118852);
 			cmds.RegisterCommands<GlobalCommands>(guildId);
 			await cmds.RefreshCommands();
+		}
+
+		private async Task RunAsync()
+		{
+			await _client.ConnectAsync();
+			await Task.Delay(-1);
 		}	
 
 		public void Dispose()

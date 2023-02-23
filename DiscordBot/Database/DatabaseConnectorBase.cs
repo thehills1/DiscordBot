@@ -1,19 +1,31 @@
 ﻿using Chloe.SQLite;
+using DiscordBot.Database.Tables;
 
 namespace DiscordBot.Database
 {
 	public abstract class DatabaseConnectorBase : IDatabaseConnector
 	{
-		private readonly string _connectionString;
+		public abstract string DatabasePath { get; }
 
-		protected DatabaseConnectorBase(string connectionString)
+		protected DatabaseConnectorBase() { }
+
+		public virtual SQLiteContext GetDBContext()
 		{
-			_connectionString = connectionString;
+			var context = new SQLiteContext(() => new System.Data.SQLite.SQLiteConnection($"Data Source={DatabasePath}"));
+
+			CreateDatabaseIfNotExists(context);
+
+			return context;
 		}
 
-		public SQLiteContext Connect()
+		private void CreateDatabaseIfNotExists(SQLiteContext context)
 		{
-			return new SQLiteContext(() => new System.Data.SQLite.SQLiteConnection(_connectionString));
+			if (File.Exists(DatabasePath)) return;
+
+			File.Create(DatabasePath).Close();
+
+			TableHelper.InitTable<ModeratorTable>(context);
+			TableHelper.InitTable<DismissedModeratorTable>(context);
 		}
 	}
 }

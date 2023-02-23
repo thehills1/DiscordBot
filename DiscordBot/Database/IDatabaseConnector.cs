@@ -4,6 +4,7 @@ namespace DiscordBot.Database
 {
 	public interface IDatabaseConnector
 	{
-		SQLiteContext Connect();
+		string DatabasePath { get; }
+		SQLiteContext GetDBContext();
 	}
 }

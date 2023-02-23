@@ -15,6 +15,7 @@
     <PackageReference Include="DSharpPlus.Interactivity" Version="4.3.0" />
     <PackageReference Include="DSharpPlus.SlashCommands" Version="4.3.0" />
     <PackageReference Include="DSharpPlus.VoiceNext" Version="4.3.0" />
+    <PackageReference Include="EPPlus" Version="6.1.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.117" />
   </ItemGroup>

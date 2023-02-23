@@ -7,7 +7,7 @@ namespace DiscordBot.Server.Commands
 	{
 		public async Task Test(InteractionContext context, string text)
 		{
-			File.Create(Path.Combine(BotEnvironment.ServersDirectoryPath, context.Guild.Id.ToString(), $"{text}.txt"));
+			//File.Create(Path.Combine(BotEnvironment.ServersDirectoryPath, context.Guild.Id.ToString(), $"{text}.txt"));
 			await context.CreateResponseAsync("created");
 		}
 	}

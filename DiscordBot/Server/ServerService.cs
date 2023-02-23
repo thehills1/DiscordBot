@@ -1,5 +1,6 @@
 ﻿using DiscordBot.Configs;
 using DiscordBot.Server.Commands;
+using DiscordBot.Server.Database;
 
 namespace DiscordBot.Server
 {
@@ -14,10 +15,12 @@ namespace DiscordBot.Server
 		public string RootServerDataPath => Path.Combine(BotEnvironment.ServersDirectoryPath, _serverId.ToString());
 
 		public ServerGlobalCommands ServerGlobalCommands { get; }
+		public ServerDatabaseManager DatabaseManager { get; }
 
-		public ServerService(ServerGlobalCommands serverGlobalCommands) 
+		public ServerService(ServerGlobalCommands serverGlobalCommands, ServerDatabaseManager databaseManager) 
 		{
 			ServerGlobalCommands = serverGlobalCommands;
+			DatabaseManager = databaseManager;
 		}
 
 		public void Initialize(ulong serverId)
@@ -25,6 +28,7 @@ namespace DiscordBot.Server
 			_serverId = serverId;
 
 			LoadConfig();
+			DatabaseManager.Initialize();
 
 			Console.WriteLine($"Server service for server with id: [{serverId}] was initialized.");
 		}
@@ -32,11 +36,6 @@ namespace DiscordBot.Server
 		private void LoadConfig()
 		{
 			_serverConfig = ServerConfig.LoadOrCreate(Path.Combine(RootServerDataPath, "config.json"));
-		}
-
-		private void CreateDatabaseConnector()
-		{
-
 		}
 	}
 }
