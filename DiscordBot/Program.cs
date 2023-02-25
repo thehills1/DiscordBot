@@ -51,6 +51,7 @@ namespace DiscordBot
 			serviceCollection.AddScoped<ServerDatabaseManager>();
 
 			serviceCollection.AddScoped<ServerGlobalCommands>();
+			serviceCollection.AddScoped<ServerGlobalCommandsManager>();
 		}
     }
 }

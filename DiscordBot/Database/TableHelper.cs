@@ -84,9 +84,7 @@ namespace DiscordBot.Database
 				type = type.GetEnumUnderlyingType();
 			}
 
-			if (type == typeof(DateTime)
-				|| propertyDescriptor.Column.DbType == DbType.DateTime
-				|| type == typeof(bool))
+			if (type == typeof(bool))
 			{
 				return "NUMERIC";
 			}
@@ -111,7 +109,9 @@ namespace DiscordBot.Database
 			}
 
 			if (type == typeof(Guid)
-				|| type == typeof(string))
+				|| type == typeof(string)
+				|| type == typeof(DateTime)
+				|| propertyDescriptor.Column.DbType == DbType.DateTime)
 			{
 				return "TEXT";
 			}

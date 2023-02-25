@@ -21,15 +21,15 @@ namespace DiscordBot.Database.Tables
 			return new string[]
 			{
 				nameof(User),
-				nameof(Permission),
+				nameof(PermissionLevel),
 				nameof(DecisionDate),
 				nameof(DismissionDate),
 				nameof(Nickname),
 				nameof(Sid),
-				nameof(ServerNumber),
+				nameof(ServerName),
 				nameof(Reason),
 				nameof(Reinstatement),
-				nameof(Forum),
+				nameof(ForumLink),
 				nameof(Id)
 			};
 		}

@@ -1,14 +1,90 @@
 ﻿using DiscordBot.Commands;
+using DiscordBot.Database.Enums;
+using DiscordBot.Extensions;
+using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 
 namespace DiscordBot.Server.Commands
 {
 	public class ServerGlobalCommands : IGlobalCommands
 	{
-		public async Task Test(InteractionContext context, string text)
+		private readonly ServerGlobalCommandsManager _commandsManager;
+
+		public ServerGlobalCommands(ServerGlobalCommandsManager commandsManager)
 		{
-			//File.Create(Path.Combine(BotEnvironment.ServersDirectoryPath, context.Guild.Id.ToString(), $"{text}.txt"));
-			await context.CreateResponseAsync("created");
+			_commandsManager = commandsManager;
+		}
+
+		public async Task AddModerator(
+			InteractionContext context, 
+			DiscordUser user,
+			PermissionLevel permissionLevel,
+			long reprimands, 
+			string nickname, 
+			string sid, 
+			ServerName serverName, 
+			string bankNumber, 
+			string forumLink)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TryAddModeratorTable(
+				user, 
+				permissionLevel, 
+				DateTime.Now, 
+				reprimands, 
+				nickname, 
+				sid, 
+				serverName, 
+				bankNumber, 
+				forumLink, 
+				out var message);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
+		public async Task SetModeratorPermissionLevel(
+			InteractionContext context, 
+			DiscordUser user, 
+			PermissionLevel permissionLevel, 
+			string dismissionReason = null, 
+			string reinstatement = null)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TrySetModeratorPermissionLevel(user, permissionLevel, out var message, dismissionReason, reinstatement);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
+		public async Task WarnModerator(InteractionContext context, DiscordUser user)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TryWarnModerator(user, out var message);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
+		public async Task EditModeratorInfo(InteractionContext context, DiscordUser user, string property, string value)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TryEditModeratorInfo(user, property, value, out var message);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
+		private async void SendCommandExecutionResult(InteractionContext context, bool result, string message)
+		{
+			if (result)
+			{
+				await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbedWithSuccessResult(message));
+			}
+			else
+			{
+				await context.EditResponseAsync(new DiscordWebhookBuilder().AddEmbedWithErrorResult(message));
+			}
 		}
 	}
 }

@@ -20,12 +20,20 @@ namespace DiscordBot.Database
 
 		private void CreateDatabaseIfNotExists(SQLiteContext context)
 		{
-			if (File.Exists(DatabasePath)) return;
+			try
+			{
+				if (File.Exists(DatabasePath))
+					return;
 
-			File.Create(DatabasePath).Close();
+				File.Create(DatabasePath).Close();
 
-			TableHelper.InitTable<ModeratorTable>(context);
-			TableHelper.InitTable<DismissedModeratorTable>(context);
+				TableHelper.InitTable<ModeratorTable>(context);
+				TableHelper.InitTable<DismissedModeratorTable>(context);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e);
+			}
 		}
 	}
 }

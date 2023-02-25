@@ -1,4 +1,5 @@
 ﻿using Chloe.Annotations;
+using DiscordBot.Database.Extensions;
 using DiscordBot.Extensions.Excel;
 
 namespace DiscordBot.Database.Tables
@@ -7,6 +8,8 @@ namespace DiscordBot.Database.Tables
 	[ExcelList("Состав модераторов")]
 	public class ModeratorTable : BaseModeratorTable
 	{
+		public const int ReprimandsLimit = 3;
+
 		[ExcelColumn("Дата повышения")]
 		public DateTime PromotionDate { get; set; }
 
@@ -14,6 +17,7 @@ namespace DiscordBot.Database.Tables
 		public long Reprimands { get; set; }
 
 		[ExcelColumn("Номер счёта")]
+		[AllowCommandChange]
 		public string BankNumber { get; set; }
 
 		public override string[] GetMap()
@@ -21,15 +25,15 @@ namespace DiscordBot.Database.Tables
 			return new string[]
 			{
 				nameof(User),
-				nameof(Permission),
+				nameof(PermissionLevel),
 				nameof(DecisionDate),
 				nameof(PromotionDate),
 				nameof(Reprimands),
 				nameof(Nickname),
 				nameof(Sid),
-				nameof(ServerNumber),
+				nameof(ServerName),
 				nameof(BankNumber),
-				nameof(Forum),
+				nameof(ForumLink),
 				nameof(Id)
 			};
 		}
