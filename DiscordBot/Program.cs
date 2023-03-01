@@ -34,6 +34,7 @@ namespace DiscordBot
 			serviceCollection.AddSingleton(container => SalaryConfig.LoadOrCreate("salary_config.json"));
 
 			InitializeServerServiceScope(serviceCollection);
+			InitializeBotEnvironmentDirectories();
 
 			using (var container = serviceCollection.BuildServiceProvider())
 			{
@@ -43,7 +44,7 @@ namespace DiscordBot
 			}	
         }
 
-		public static void InitializeServerServiceScope(IServiceCollection serviceCollection)
+		private static void InitializeServerServiceScope(IServiceCollection serviceCollection)
 		{
 			serviceCollection.AddScoped<IServerServiceAccessor, ServerServiceAccessor>();
 			serviceCollection.AddScoped<ServerService>();
@@ -52,6 +53,23 @@ namespace DiscordBot
 
 			serviceCollection.AddScoped<ServerGlobalCommands>();
 			serviceCollection.AddScoped<ServerGlobalCommandsManager>();
+		}
+
+		private static void InitializeBotEnvironmentDirectories()
+		{
+			var directories = new string[] 
+			{ 
+				BotEnvironment.ServersDirectoryPath,
+				BotEnvironment.DataPath,
+				BotEnvironment.ModeratorsWorksheetsPath
+			};
+
+			foreach (var directory in directories)
+			{
+				if (Directory.Exists(directory)) continue;
+
+				Directory.CreateDirectory(directory);
+			}
 		}
     }
 }

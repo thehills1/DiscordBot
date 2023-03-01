@@ -1,22 +1,40 @@
-﻿using System.Text.RegularExpressions;
+﻿using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Channels;
 using Chloe.Threading.Tasks;
+using DiscordBot.Configs;
 using DiscordBot.Database.Enums;
 using DiscordBot.Database.Tables;
 using DiscordBot.Extensions;
+using DiscordBot.Extensions.Collections;
+using DiscordBot.Extensions.Excel;
 using DiscordBot.Server.Database;
 using DSharpPlus;
 using DSharpPlus.Entities;
+using Newtonsoft.Json.Serialization;
+using Newtonsoft.Json;
 using PermissionLevel = DiscordBot.Database.Enums.PermissionLevel;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace DiscordBot.Server.Commands
 {
 	public class ServerGlobalCommandsManager
 	{
+		private readonly Bot _bot;
 		private readonly ServerDatabaseManager _databaseManager;
+		private readonly ServerConfig _serverConfig;
+		private readonly SalaryConfig _salaryConfig;
 
-		public ServerGlobalCommandsManager(ServerDatabaseManager databaseManager)
+		public ServerGlobalCommandsManager(
+			Bot bot, 
+			ServerDatabaseManager databaseManager, 
+			ServerConfig serverConfig, 
+			SalaryConfig salaryConfig)
 		{
+			_bot = bot;
 			_databaseManager = databaseManager;
+			_serverConfig = serverConfig;
+			_salaryConfig = salaryConfig;
 		}
 
 		public bool TryAddModeratorTable(
@@ -132,7 +150,7 @@ namespace DiscordBot.Server.Commands
 					if (!TryEditBankNumber(table, value, out message)) return false;
 					break;
 				case nameof(ModeratorTable.Nickname):
-					if (!TryEdit\Nickname(table, value, out message)) return false;					
+					if (!TryEditNickname(table, value, out message)) return false;					
 					break;
 				case nameof(ModeratorTable.ServerName):
 					if (!TryEditServerName(table, value, out message)) return false;
@@ -148,6 +166,129 @@ namespace DiscordBot.Server.Commands
 				$"\nБыли изменены данные: **{property}.** " +
 				$"\nНовое значение: **{value}.**";
 			return true;
+		}
+
+		public bool TrySendExcelStaffWorksheet(DiscordChannel channel, bool allTables, out string message)
+		{
+			message = "";
+
+			var tables = new List<ITableCollection>();
+
+			var modTables = _databaseManager.GetTablesList<ModeratorTable>().Result.OrderByDescending(table => table.PermissionLevel).ToList();
+			tables.Add(new TableCollection<ModeratorTable>(modTables));
+
+			if (allTables)
+			{
+				var dismissedModTables = _databaseManager.GetTablesList<DismissedModeratorTable>().Result.OrderBy(table => table.DismissionDate).ToList();
+				tables.Add(new TableCollection<DismissedModeratorTable>(dismissedModTables));
+			}
+
+			var fileName = Path.Combine(BotEnvironment.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".")}.xlsx");
+			var messageContent = "Актуальный список модераторов:";
+
+			var lastMessages = channel.GetMessagesAsync().Result;
+			foreach (var discordMessage in lastMessages)
+			{
+				if (discordMessage.Content.Contains(messageContent))
+				{
+					discordMessage.DeleteAsync().GetResult();
+					break;
+				}
+			}
+
+			ExcelWorksheetCreator.GenerateAndSaveFile(tables, fileName);
+
+			using (var fileStream = new FileStream(fileName, FileMode.Open))
+			{
+				_ = new DiscordMessageBuilder().WithContent(messageContent).AddFile(fileStream).SendAsync(channel).Result;
+			}
+
+			message = $"Лист с таблицами был успешно отправлен в канал {channel.Mention}.";
+			return true;
+		}
+
+		public bool TrySendExcelSalaryWorksheet(out string message, int weeks = 2)
+		{
+			message = "";
+
+			var channelToDownload = _bot.GetChannelAsync(_serverConfig.BotStatsChannelId).Result;
+			var channelToSend = _bot.GetChannelAsync(_serverConfig.StatsChannelId).Result;
+
+			var moderatorsActions = GetModeratorsActions(channelToDownload, weeks);
+			CheckAndRemoveExtraModeratorsActions(moderatorsActions, weeks, out var totalActions);
+			var salaryTables = CalculateSalary(moderatorsActions, weeks, totalActions);
+
+			var dateTimeNow = DateTime.Now;
+			var date0 = dateTimeNow.AddDays(-weeks * 7).ToShortDateString();
+			var date1 = dateTimeNow.ToShortDateString();
+
+			var fileName = $"backups/salary/salary {date1} - {date2}.xlsx";
+
+			message = $"Лист зарплатой был успешно отправлен в канал {channelToSend.Mention}.";
+			return true;
+		}
+
+		private Dictionary<ulong, int> GetModeratorsActions(DiscordChannel channel, int weeks = 2)
+		{
+			var moderatorsActions = new Dictionary<ulong, int>();
+
+			var messages = channel.GetMessagesAsync(weeks).Result;
+			foreach (var message in messages)
+			{
+				var url = message.Attachments.First().Url;
+				var json = Encoding.UTF8.GetString(new HttpClient().GetByteArrayAsync(url).Result);
+
+				var settings = new JsonSerializerSettings() { ContractResolver = new DefaultContractResolver() { NamingStrategy = new SnakeCaseNamingStrategy() } };
+				var tables = JsonConvert.DeserializeObject<WeeklyStatsTable[]>(json, settings);
+
+				foreach (var table in tables)
+                {
+                    var id = table.Id;
+                    var moderatorActions = table.Tickets + table.Punishments;
+
+					if (moderatorsActions.ContainsKey(id))
+					{
+						moderatorsActions[id] += moderatorActions;
+					}
+					else
+					{
+						moderatorsActions.Add(id, moderatorActions);
+					}
+				}
+			}
+
+			return moderatorsActions;
+		}
+
+		private void CheckAndRemoveExtraModeratorsActions(Dictionary<ulong, int> actions, int weeks, out int totalActions)
+		{
+			totalActions = 0;
+
+			foreach (var moderatorAction in actions)
+			{
+				var table = _databaseManager.GetTable<ModeratorTable>(moderatorAction.Key).Result;
+
+				if (table == null)
+				{
+					actions.Remove(moderatorAction.Key);
+					continue;
+				}
+
+				if (table.PermissionLevel <= PermissionLevel.Curator 
+					&& moderatorAction.Value >= _salaryConfig.ActionsPerWeekToSalary * weeks)
+				{
+					totalActions += moderatorAction.Value;
+				}
+			}
+		}
+
+		private List<ModeratorSalaryTable> CalculateSalary(Dictionary<ulong, int> actions, int weeks, int totalActions)
+		{
+			var output = new List<ModeratorSalaryTable>();
+
+
+
+			return output;
 		}
 
 		private bool TryEditSid(ModeratorTable table, string value, out string message)

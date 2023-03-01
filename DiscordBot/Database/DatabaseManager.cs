@@ -1,11 +1,14 @@
 ﻿using System.Linq.Expressions;
 using Chloe.SQLite;
+using DiscordBot.Database.Events;
 using DiscordBot.Database.Tables;
 
 namespace DiscordBot.Database
 {
 	public class DatabaseManager<TDatabaseConnector> : IDatabaseManager where TDatabaseConnector : IDatabaseConnector
 	{
+		public event EventHandler<DatabaseInteractionEventArgs> DatabaseInteractionCompleted;
+
 		private SQLiteContext _databaseContext;
 		private IDatabaseConnector _databaseConnector;
 
@@ -32,18 +35,14 @@ namespace DiscordBot.Database
 				_databaseContext.Update(table);
 			}
 
-			//if (table is ModeratorTable || table is DismissedModeratorTable)
-			//{
-			//	SendActualModeratorsFile();
-			//	if (table is not DismissedModeratorTable) UpdateModeratorsUsername();
-			//}
+			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
 		}	
 
 		public async Task RemoveTable<T>(T table) where T : BaseTable
 		{
 			await _databaseContext.DeleteAsync(table);
 
-			//if (table is ModeratorTable) SendActualModeratorsFile();
+			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
 		}
 
 		public async Task<List<T>> GetTablesList<T>() where T : BaseTable

@@ -1,5 +1,4 @@
 ﻿using System.Reflection;
-using DiscordBot.Database.Extensions;
 
 namespace DiscordBot.Extensions
 {
@@ -12,7 +11,7 @@ namespace DiscordBot.Extensions
 			var properties = type.GetProperties();
 			foreach (var property in properties)
 			{
-				var changeAttribute = (AllowCommandChangeAttribute) Attribute.GetCustomAttribute(property, typeof(AllowCommandChangeAttribute));
+				var changeAttribute = Attribute.GetCustomAttribute(property, typeof(AllowCommandChangeAttribute)) as AllowCommandChangeAttribute;
 				if (changeAttribute == null) continue;
 
 				output.Add(property);

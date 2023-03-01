@@ -1,4 +1,4 @@
-﻿namespace DiscordBot.Database.Extensions
+﻿namespace DiscordBot.Extensions
 {
 	public class AllowCommandChangeAttribute : Attribute
 	{

@@ -1,5 +1,6 @@
 ﻿using DiscordBot.Commands;
 using DSharpPlus;
+using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 using OfficeOpenXml;
 
@@ -25,6 +26,8 @@ namespace DiscordBot
 
 			await RunAsync();
 		}
+
+		public async Task<DiscordChannel> GetChannelAsync(ulong id) => await _client.GetChannelAsync(id);
 
 		private void SetupCommandsRegistration()
 		{

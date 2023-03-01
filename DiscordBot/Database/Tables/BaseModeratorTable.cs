@@ -1,5 +1,5 @@
 ﻿using DiscordBot.Database.Enums;
-using DiscordBot.Database.Extensions;
+using DiscordBot.Extensions;
 using DiscordBot.Extensions.Excel;
 
 namespace DiscordBot.Database.Tables

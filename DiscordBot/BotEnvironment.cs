@@ -2,7 +2,9 @@
 {
 	public class BotEnvironment
 	{
-		public const string ServersDirectoryPath = "servers";
-		public const string DataPath = "data";
+		public static string ServersDirectoryPath = "servers";
+		public static string DataPath = "data";
+		public static string ModeratorsWorksheetsPath = Path.Combine(DataPath, "ModeratorsWorksheets");
+		//public static string SalaryWorksheetsPath = Path.Combine	
 	}
 }

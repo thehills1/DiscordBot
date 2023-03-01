@@ -4,7 +4,7 @@
     {
         public int Sum { get; set; }
         public ChiefsSalary ChiefsSalary { get; set; }
-        public int ActionsToSalary { get; set; }  
+        public int ActionsPerWeekToSalary { get; set; }  
     }
 
     public class ChiefsSalary

@@ -62,8 +62,27 @@ namespace DiscordBot.Commands
 			[Option("Property", "Изменяемые данные")] [Autocomplete(typeof(TablePropertyAutocompleteProvider<ModeratorTable>))] string property,
 			[Option("Value", "Новое значение")] [Autocomplete(typeof(TablePropertyValueAutocompleteProvider<ModeratorTable>))] string value)
 		{
-			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands.
-				EditModeratorInfo(context, user, property, value);
+			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+				.EditModeratorInfo(context, user, property, value);
+		}
+
+		[SlashCommand("sendworksheet", "Отправить лист excel с данными из указанной таблицы.", false)]
+		public async Task SendExcelStaffWorksheet(
+			InteractionContext context,
+			[Option("Channel", "Канал для отправки")] DiscordChannel channel,
+			[Option("AllTables", "Отправить все таблицы")] bool allTables)
+		{
+			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+				.SendExcelStaffWorksheet(context, channel, allTables);
+		}
+
+		[SlashCommand("sendsalary", "Отправляет таблицу с зарплатой за прошедшие 2 недели.", false)]
+		public async Task SendExcelSalaryWorksheet(
+			InteractionContext context,
+			[Option("Weeks", "Количество недель, зарплату для которых надо просчитать")] int weeks = 2)
+		{
+			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+				.SendExcelSalaryWorksheet(context, weeks);
 		}
 	}
 }

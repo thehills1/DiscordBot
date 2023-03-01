@@ -1,4 +1,6 @@
-﻿using DiscordBot.Extensions.Collections;
+﻿using DiscordBot.Database.Enums;
+using DiscordBot.Database.Tables;
+using DiscordBot.Extensions.Collections;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
@@ -16,8 +18,8 @@ namespace DiscordBot.Extensions.Excel
 				{
 					if (insertTable.Count != 0)
 					{
-						var tableType = insertTable.GetType();
-						var listName = (ExcelListAttribute) Attribute.GetCustomAttribute(tableType, typeof(ExcelListAttribute));
+						var tableType = insertTable.GetTableType();
+						var listName = Attribute.GetCustomAttribute(tableType, typeof(ExcelListAttribute)) as ExcelListAttribute;
 
 						var sheet = package.Workbook.Worksheets.Add(listName.Name);
 						var props = insertTable.First().GetMap();
@@ -38,14 +40,14 @@ namespace DiscordBot.Extensions.Excel
 			}
 		}
 
-		private static void FillColumnNames(ExcelWorksheet sheet, string[] props, Type type)
+		private static void FillColumnNames(ExcelWorksheet sheet, string[] props, Type tableType)
 		{
-			var propsInfo = props.Select(type.GetProperty).ToArray();
+			var propsInfo = props.Select(tableType.GetProperty).ToArray();
 
 			for (int i = 0; i < props.Length; i++)
 			{
 				string name;
-				var columnName = (ExcelColumnAttribute) Attribute.GetCustomAttribute(propsInfo[i], typeof(ExcelColumnAttribute));
+				var columnName = Attribute.GetCustomAttribute(propsInfo[i], typeof(ExcelColumnAttribute)) as ExcelColumnAttribute;
 
 				if (columnName == null)
 				{
@@ -60,7 +62,7 @@ namespace DiscordBot.Extensions.Excel
 			}
 		}
 
-		private static void FillColumnValues(ExcelWorksheet sheet, ITableCollection tables, string[] props, Type type)
+		private static void FillColumnValues(ExcelWorksheet sheet, ITableCollection tables, string[] props, Type tableType)
 		{
 			for (int row = 0; row < tables.Count(); row++)
 			{
@@ -68,9 +70,23 @@ namespace DiscordBot.Extensions.Excel
 
 				for (int column = 0; column < props.Count(); column++)
 				{
-					var name = props[column];
-					var value = type.GetProperty(name).GetValue(table);
-					sheet.Cells[row + 2, column + 1].Value = value?.ToString();
+					var propertyName = props[column];
+					var value = tableType.GetProperty(propertyName).GetValue(table)?.ToString();
+
+					switch (propertyName)
+					{
+						case nameof(ModeratorTable.DecisionDate):
+						case nameof(ModeratorTable.PromotionDate):
+						case nameof(DismissedModeratorTable.DismissionDate):
+							value = DateTime.Parse(value).ToShortDateString();
+							break;
+
+						case nameof(ModeratorTable.PermissionLevel):
+							value = ((int) Enum.Parse<PermissionLevel>(value)).ToString();
+							break;
+					}	
+
+					sheet.Cells[row + 2, column + 1].Value = value;
 				}
 			}
 		}

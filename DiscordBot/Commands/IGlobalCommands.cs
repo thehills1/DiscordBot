@@ -27,5 +27,9 @@ namespace DiscordBot.Commands
 		Task WarnModerator(InteractionContext context, DiscordUser user);
 
 		Task EditModeratorInfo(InteractionContext context, DiscordUser user, string property, string value);
+
+		Task SendExcelStaffWorksheet(InteractionContext context, DiscordChannel channel, bool allTables);
+
+		Task SendExcelSalaryWorksheet(InteractionContext context, int weeks);
 	}
 }

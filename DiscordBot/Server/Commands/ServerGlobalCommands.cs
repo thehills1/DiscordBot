@@ -75,6 +75,24 @@ namespace DiscordBot.Server.Commands
 			SendCommandExecutionResult(context, result, message);
 		}
 
+		public async Task SendExcelStaffWorksheet(InteractionContext context, DiscordChannel channel, bool allTables)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TrySendExcelStaffWorksheet(channel, allTables, out var message);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
+		public async Task SendExcelSalaryWorksheet(InteractionContext context, int weeks = 2)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TrySendExcelSalaryWorksheet(out var message, weeks);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
 		private async void SendCommandExecutionResult(InteractionContext context, bool result, string message)
 		{
 			if (result)
