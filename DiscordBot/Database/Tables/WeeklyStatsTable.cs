@@ -1,10 +1,11 @@
 ﻿namespace DiscordBot.Database.Tables
 {
-	public class WeeklyStatsTable : BaseTable
+	public class WeeklyStatsTable : ITable
 	{
+		public ulong Id { get; set; }
 		public int Punishments { get; set; }
 		public int Tickets { get; set; }
 
-		public override string[] GetMap() => null;
+		public string[] GetMap() => null;
 	}
 }

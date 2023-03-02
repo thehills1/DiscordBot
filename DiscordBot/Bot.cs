@@ -29,7 +29,9 @@ namespace DiscordBot
 
 		public async Task<DiscordChannel> GetChannelAsync(ulong id) => await _client.GetChannelAsync(id);
 
-		private void SetupCommandsRegistration()
+        public async Task<DiscordUser> GetUserAsync(ulong id) => await _client.GetUserAsync(id);
+
+        private void SetupCommandsRegistration()
 		{
 			var cmds = _client.UseSlashCommands(new SlashCommandsConfiguration() { Services = _serviceProvider });
 

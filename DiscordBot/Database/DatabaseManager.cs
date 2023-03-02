@@ -22,7 +22,7 @@ namespace DiscordBot.Database
 			_databaseContext = _databaseConnector.GetDBContext();
 		}
 
-		public void AddOrUpdateTableDB<T>(T table) where T : BaseTable
+		public void AddOrUpdateTableDB<T>(T table) where T : ITable
 		{
 			int results = _databaseContext.Update(table);
 
@@ -38,19 +38,26 @@ namespace DiscordBot.Database
 			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
 		}	
 
-		public async Task RemoveTable<T>(T table) where T : BaseTable
+		public void AddTableDB<T>(T table) where T : ITable
+		{
+			_databaseContext.Insert(table);
+
+			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
+		}
+
+		public async Task RemoveTable<T>(T table) where T : ITable
 		{
 			await _databaseContext.DeleteAsync(table);
 
 			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
 		}
 
-		public async Task<List<T>> GetTablesList<T>() where T : BaseTable
+		public async Task<List<T>> GetTablesList<T>() where T : ITable
 		{
 			return await _databaseContext.Query<T>().ToListAsync();
 		}
 
-		public async Task<T> GetTableDB<T>(Expression<Func<T, bool>> selector) where T : BaseTable
+		public async Task<T> GetTableDB<T>(Expression<Func<T, bool>> selector) where T : ITable
 		{
 			return await _databaseContext.Query<T>().FirstOrDefaultAsync(selector);
 		}

@@ -50,6 +50,7 @@ namespace DiscordBot
 			serviceCollection.AddScoped<ServerService>();
 			serviceCollection.AddScoped<ServerDatabaseConnector>();
 			serviceCollection.AddScoped<ServerDatabaseManager>();
+			serviceCollection.AddScoped<ServerConfig>(container => container.GetService<ServerService>().ServerConfig);
 
 			serviceCollection.AddScoped<ServerGlobalCommands>();
 			serviceCollection.AddScoped<ServerGlobalCommandsManager>();
@@ -60,8 +61,7 @@ namespace DiscordBot
 			var directories = new string[] 
 			{ 
 				BotEnvironment.ServersDirectoryPath,
-				BotEnvironment.DataPath,
-				BotEnvironment.ModeratorsWorksheetsPath
+				BotEnvironment.AutocompleteProvidersChoicesPath
 			};
 
 			foreach (var directory in directories)

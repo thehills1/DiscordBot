@@ -30,6 +30,6 @@ namespace DiscordBot.Commands
 
 		Task SendExcelStaffWorksheet(InteractionContext context, DiscordChannel channel, bool allTables);
 
-		Task SendExcelSalaryWorksheet(InteractionContext context, int weeks);
+		Task SendExcelSalaryWorksheet(InteractionContext context, long weeks);
 	}
 }

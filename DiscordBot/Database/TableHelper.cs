@@ -39,7 +39,10 @@ namespace DiscordBot.Database
 
 			if (typeDescriptor.PrimaryKeys.Count > 0)
 			{
-				string key = string.Join(", ", typeDescriptor.PrimaryKeys.Select(propertyDescriptor => QuoteName(propertyDescriptor.Column.Name)));
+				string key = string.Join(", ", 
+					typeDescriptor.PrimaryKeys.Select(propertyDescriptor => 
+					QuoteName(propertyDescriptor.Column.Name, propertyDescriptor.IsAutoIncrement)));
+
 				sb.AppendLine(c);
 				sb.Append($"PRIMARY KEY ({key})");
 			}
@@ -50,9 +53,9 @@ namespace DiscordBot.Database
 			return sb.ToString();
 		}
 
-		static string QuoteName(string name)
+		static string QuoteName(string name, bool autoIncrement = false)
 		{
-			return string.Concat("\"", name.ToLower(), "\"");
+			return string.Concat("\"", name.ToLower(), "\"", autoIncrement ? " AUTOINCREMENT" : null);
 		}
 
 		static string BuildColumnPart(PrimitivePropertyDescriptor propertyDescriptor)
@@ -73,11 +76,6 @@ namespace DiscordBot.Database
 
 		static string GetMappedDbTypeName(PrimitivePropertyDescriptor propertyDescriptor)
 		{
-			if (propertyDescriptor.IsAutoIncrement)
-			{
-				return "AUTOINCREMENT";
-			}
-
 			Type type = propertyDescriptor.PropertyType.GetUnderlyingType();
 			if (type.IsEnum)
 			{

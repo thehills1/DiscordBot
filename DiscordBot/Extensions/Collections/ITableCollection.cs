@@ -2,9 +2,9 @@
 
 namespace DiscordBot.Extensions.Collections
 {
-	public interface ITableCollection : IReadOnlyCollection<BaseTable>
+	public interface ITableCollection : IReadOnlyCollection<ITable>
 	{
-		BaseTable this[int index] { get; }
+		ITable this[int index] { get; }
 		Type GetTableType();
 	}
 }

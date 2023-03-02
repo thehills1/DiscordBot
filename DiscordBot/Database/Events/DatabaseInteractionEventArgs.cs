@@ -4,9 +4,9 @@ namespace DiscordBot.Database.Events
 {
 	public class DatabaseInteractionEventArgs : EventArgs
 	{
-		public BaseTable Table { get; set; }
+		public ITable Table { get; set; }
 
-		public DatabaseInteractionEventArgs(BaseTable table)
+		public DatabaseInteractionEventArgs(ITable table)
 		{
 			Table = table;
 		}

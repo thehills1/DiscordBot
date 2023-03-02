@@ -6,7 +6,7 @@ namespace DiscordBot.Server.Database
 	{
 		public const string ServerBasicDatabaseName = "base.db";
 
-		public override string DatabasePath => Path.Combine(_serverServiceAccessor.Service.RootServerDataPath, ServerBasicDatabaseName);
+		public override string DatabasePath => Path.Combine(_serverServiceAccessor.Service.RootServerPath, ServerBasicDatabaseName);
 
 		private readonly IServerServiceAccessor _serverServiceAccessor;
 

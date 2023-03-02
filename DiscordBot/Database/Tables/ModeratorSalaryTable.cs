@@ -1,10 +1,19 @@
-﻿using DiscordBot.Database.Enums;
+﻿using Chloe.Annotations;
+using DiscordBot.Database.Enums;
 using DiscordBot.Extensions.Excel;
 
 namespace DiscordBot.Database.Tables
 {
-	public class ModeratorSalaryTable : BaseTable
+	[Table(Name = "salary")]
+	[ExcelList("Зарплата модераторов")]
+	public class ModeratorSalaryTable : ITable
 	{
+		[Column(IsPrimaryKey = true)]
+		[AutoIncrement]
+		public int UniqueId { get; set; }
+
+		public ulong Id { get; set; }
+
 		[ExcelColumn("Дискорд")]
 		public string User { get; set; }
 
@@ -20,13 +29,22 @@ namespace DiscordBot.Database.Tables
 		[ExcelColumn("Зарплата")]
 		public int Salary { get; set; }
 
-		public override string[] GetMap()
+		[ExcelColumn("Начало расчетного периода")]
+		public DateTime PeriodStartDate { get; set; }
+
+		[ExcelColumn("Конец расчетного периода")]
+		public DateTime PeriodEndDate { get; set; }
+
+		public string[] GetMap()
 		{
 			return new string[]
 			{
 				nameof(User),
+				nameof(ServerName),
 				nameof(BankNumber),
 				nameof(ActionsCount),
+				nameof(PeriodStartDate),
+				nameof(PeriodEndDate),
 				nameof(Salary),
 				nameof(Id)
 			};

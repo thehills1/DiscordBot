@@ -6,8 +6,6 @@ namespace DiscordBot.Commands.AutocompleteProviders
 {
 	public class AutocompleteProvider : IAutocompleteProvider
 	{
-		private readonly string _providerChoicesPath = Path.Combine(BotEnvironment.DataPath, "autocomplete");
-
 		private object _cacheSync = new object();
 
 		public List<DiscordAutoCompleteChoice> Choices { get; set; } = new List<DiscordAutoCompleteChoice>();
@@ -23,7 +21,7 @@ namespace DiscordBot.Commands.AutocompleteProviders
 
             lock (_cacheSync)
             {
-                var configPath = Path.Combine(_providerChoicesPath, $"{GetType().Name}.json");
+                var configPath = Path.Combine(BotEnvironment.AutocompleteProvidersChoicesPath, $"{GetType().Name}.json");
                 return Choices = JsonConvert.DeserializeObject<List<DiscordAutoCompleteChoice>>(File.ReadAllText(configPath));
             }
         }

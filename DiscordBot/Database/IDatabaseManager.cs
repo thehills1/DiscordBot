@@ -7,12 +7,12 @@ namespace DiscordBot.Database
 	{
 		void Initialize();
 
-		void AddOrUpdateTableDB<T>(T table) where T : BaseTable;
+		void AddOrUpdateTableDB<T>(T table) where T : ITable;
 
-		Task RemoveTable<T>(T table) where T : BaseTable;
+		Task RemoveTable<T>(T table) where T : ITable;
 
-		Task<List<T>> GetTablesList<T>() where T : BaseTable;
+		Task<List<T>> GetTablesList<T>() where T : ITable;
 
-		Task<T> GetTableDB<T>(Expression<Func<T, bool>> selector) where T : BaseTable;
+		Task<T> GetTableDB<T>(Expression<Func<T, bool>> selector) where T : ITable;
 	}
 }

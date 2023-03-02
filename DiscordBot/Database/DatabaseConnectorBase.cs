@@ -22,13 +22,13 @@ namespace DiscordBot.Database
 		{
 			try
 			{
-				if (File.Exists(DatabasePath))
-					return;
+				if (File.Exists(DatabasePath)) return;
 
 				File.Create(DatabasePath).Close();
 
 				TableHelper.InitTable<ModeratorTable>(context);
 				TableHelper.InitTable<DismissedModeratorTable>(context);
+				TableHelper.InitTable<ModeratorSalaryTable>(context);
 			}
 			catch (Exception e)
 			{

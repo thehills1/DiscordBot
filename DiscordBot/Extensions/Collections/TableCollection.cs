@@ -4,17 +4,17 @@ using DiscordBot.Database.Tables;
 
 namespace DiscordBot.Extensions.Collections
 {
-	public class TableCollection<T> : ReadOnlyCollection<T>, ITableCollection where T : BaseTable
+	public class TableCollection<T> : ReadOnlyCollection<T>, ITableCollection where T : ITable
 	{
-		BaseTable ITableCollection.this[int index] { get => this[index]; }
+		ITable ITableCollection.this[int index] { get => this[index]; }
 
 		public TableCollection(IList<T> list) : base(list) { }
 
 		public Type GetTableType() => typeof(T);
 
-		public new IEnumerator<BaseTable> GetEnumerator()
+		public new IEnumerator<ITable> GetEnumerator()
 		{
-			return base.GetEnumerator();
+			return (IEnumerator<ITable>) base.GetEnumerator();
 		}
 
 		IEnumerator IEnumerable.GetEnumerator()

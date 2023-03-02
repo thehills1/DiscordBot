@@ -84,11 +84,11 @@ namespace DiscordBot.Server.Commands
 			SendCommandExecutionResult(context, result, message);
 		}
 
-		public async Task SendExcelSalaryWorksheet(InteractionContext context, int weeks = 2)
+		public async Task SendExcelSalaryWorksheet(InteractionContext context, long weeks = 2)
 		{
 			await context.DeferAsync(true);
 
-			var result = _commandsManager.TrySendExcelSalaryWorksheet(out var message, weeks);
+			var result = _commandsManager.TrySendExcelSalaryWorksheet(out var message, (int) weeks);
 
 			SendCommandExecutionResult(context, result, message);
 		}

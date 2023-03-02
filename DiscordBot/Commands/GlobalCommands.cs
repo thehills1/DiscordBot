@@ -79,10 +79,18 @@ namespace DiscordBot.Commands
 		[SlashCommand("sendsalary", "Отправляет таблицу с зарплатой за прошедшие 2 недели.", false)]
 		public async Task SendExcelSalaryWorksheet(
 			InteractionContext context,
-			[Option("Weeks", "Количество недель, зарплату для которых надо просчитать")] int weeks = 2)
+			[Option("Weeks", "Количество недель, зарплату для которых надо просчитать")] long weeks = 2)
+		
 		{
-			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
-				.SendExcelSalaryWorksheet(context, weeks);
+			try
+			{
+                await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+                .SendExcelSalaryWorksheet(context, weeks);
+            }
+			catch (Exception e)
+			{
+                Console.WriteLine(e);
+            }
 		}
 	}
 }
