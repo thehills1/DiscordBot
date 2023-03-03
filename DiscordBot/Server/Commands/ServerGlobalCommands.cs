@@ -75,7 +75,7 @@ namespace DiscordBot.Server.Commands
 			SendCommandExecutionResult(context, result, message);
 		}
 
-		public async Task SendExcelStaffWorksheet(InteractionContext context, DiscordChannel channel, bool allTables)
+		public async Task SendStaffInfo(InteractionContext context, DiscordChannel channel, bool allTables)
 		{
 			await context.DeferAsync(true);
 

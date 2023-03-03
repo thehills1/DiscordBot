@@ -66,14 +66,14 @@ namespace DiscordBot.Commands
 				.EditModeratorInfo(context, user, property, value);
 		}
 
-		[SlashCommand("sendworksheet", "Отправить лист excel с данными из указанной таблицы.", false)]
-		public async Task SendExcelStaffWorksheet(
+		[SlashCommand("sendstaffinfo", "Отправить лист excel с данными о составе модераторов.", false)]
+		public async Task SendStaffInfo(
 			InteractionContext context,
 			[Option("Channel", "Канал для отправки")] DiscordChannel channel,
-			[Option("AllTables", "Отправить все таблицы")] bool allTables)
+			[Option("AllTables", "Отправить все дополнительные таблицы")] bool allTables)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
-				.SendExcelStaffWorksheet(context, channel, allTables);
+				.SendStaffInfo(context, channel, allTables);
 		}
 
 		[SlashCommand("sendsalary", "Отправляет таблицу с зарплатой за прошедшие 2 недели.", false)]
