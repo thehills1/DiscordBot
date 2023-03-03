@@ -274,8 +274,8 @@ namespace DiscordBot.Server.Commands
 				}
 			}
 
-			periodStartDate = messages.First().Timestamp.DateTime.AddDays(-7);
-			periodEndDate = messages.Last().Timestamp.DateTime;
+			periodStartDate = messages.Last().Timestamp.DateTime.AddDays(-7);
+			periodEndDate = messages.First().Timestamp.DateTime;
 
 			return moderatorsActions;
 		}

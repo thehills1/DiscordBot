@@ -1,6 +1,7 @@
 ﻿using DiscordBot.Database.Enums;
 using DiscordBot.Database.Tables;
 using DiscordBot.Extensions.Collections;
+using Microsoft.Win32.SafeHandles;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
@@ -73,18 +74,15 @@ namespace DiscordBot.Extensions.Excel
 					var propertyName = props[column];
 					var value = tableType.GetProperty(propertyName).GetValue(table)?.ToString();
 
-					switch (propertyName)
+					switch(tableType.GetProperty(propertyName).PropertyType.Name)
 					{
-						case nameof(ModeratorTable.DecisionDate):
-						case nameof(ModeratorTable.PromotionDate):
-						case nameof(DismissedModeratorTable.DismissionDate):
+						case nameof(DateTime):
 							value = DateTime.Parse(value).ToShortDateString();
 							break;
-
-						case nameof(ModeratorTable.PermissionLevel):
+						case nameof(PermissionLevel):
 							value = ((int) Enum.Parse<PermissionLevel>(value)).ToString();
 							break;
-					}	
+					}
 
 					sheet.Cells[row + 2, column + 1].Value = value;
 				}

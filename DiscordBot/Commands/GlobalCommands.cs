@@ -82,15 +82,8 @@ namespace DiscordBot.Commands
 			[Option("Weeks", "Количество недель, зарплату для которых надо просчитать")] long weeks = 2)
 		
 		{
-			try
-			{
-                await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
-                .SendExcelSalaryWorksheet(context, weeks);
-            }
-			catch (Exception e)
-			{
-                Console.WriteLine(e);
-            }
+			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+				.SendExcelSalaryWorksheet(context, weeks);
 		}
 	}
 }
