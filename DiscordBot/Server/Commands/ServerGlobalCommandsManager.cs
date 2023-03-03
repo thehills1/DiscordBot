@@ -1,22 +1,21 @@
-﻿using Chloe.Threading.Tasks;
+﻿using System.Text;
+using System.Text.RegularExpressions;
+using Chloe.Threading.Tasks;
 using DiscordBot.Configs;
 using DiscordBot.Database.Enums;
 using DiscordBot.Database.Tables;
 using DiscordBot.Extensions;
 using DiscordBot.Extensions.Collections;
 using DiscordBot.Extensions.Excel;
-using DiscordBot.Server.Database;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using System.Text;
-using System.Text.RegularExpressions;
 using PermissionLevel = DiscordBot.Database.Enums.PermissionLevel;
 
 namespace DiscordBot.Server.Commands
 {
-    public class ServerGlobalCommandsManager
+	public class ServerGlobalCommandsManager
 	{
 		private readonly Bot _bot;
 		private readonly IServerServiceAccessor _serverServiceAccessor;
@@ -220,13 +219,11 @@ namespace DiscordBot.Server.Commands
 					out var periodStartDate, 
 					out var periodEndDate, 
 					weeks);
+
 			CheckAndRemoveExtraModeratorsActions(moderatorsActions, weeks, out var totalActions);
 			var salaryTables = CalculateSalary(moderatorsActions, weeks, totalActions, periodStartDate, periodEndDate);
 
-			var dateTimeNow = DateTime.Now;
-			var date0 = dateTimeNow.AddDays(-weeks * 7).ToShortDateString();
-			var date1 = dateTimeNow.ToShortDateString();
-			var datesString = $"{date0} - {date1}";
+			var datesString = $"{periodStartDate.ToShortDateString()} - {periodEndDate.ToShortDateString()}";
 
 			var fileName = Path.Combine(_serverServiceAccessor.Service.SalaryWorksheetsPath, $"salary {datesString}.xlsx");
 			ExcelWorksheetCreator.GenerateAndSaveFile(new() { salaryTables }, fileName);
