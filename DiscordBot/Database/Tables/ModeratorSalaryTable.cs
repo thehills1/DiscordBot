@@ -43,8 +43,6 @@ namespace DiscordBot.Database.Tables
 				nameof(ServerName),
 				nameof(BankNumber),
 				nameof(ActionsCount),
-				nameof(PeriodStartDate),
-				nameof(PeriodEndDate),
 				nameof(Salary),
 				nameof(Id)
 			};

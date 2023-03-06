@@ -7,7 +7,9 @@ namespace DiscordBot.Database
 {
 	public class DatabaseManager<TDatabaseConnector> : IDatabaseManager where TDatabaseConnector : IDatabaseConnector
 	{
-		public event EventHandler<DatabaseInteractionEventArgs> DatabaseInteractionCompleted;
+		public event EventHandler<TableAddedEventArgs> TableAdded;
+		public event EventHandler<TableUpdatedEventArgs> TableUpdated;
+		public event EventHandler<TableRemovedEventArgs> TableRemoved;
 
 		private SQLiteContext _databaseContext;
 		private IDatabaseConnector _databaseConnector;
@@ -28,28 +30,28 @@ namespace DiscordBot.Database
 
 			if (results == 0)
 			{
-				_databaseContext.Insert(table);
+				AddTableDB(table);
 			}
 			else
 			{
 				_databaseContext.Update(table);
-			}
 
-			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
+				TableUpdated?.Invoke(this, new TableUpdatedEventArgs(table));
+			}
 		}	
 
 		public void AddTableDB<T>(T table) where T : ITable
 		{
 			_databaseContext.Insert(table);
 
-			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
+			TableAdded?.Invoke(this, new TableAddedEventArgs(table));
 		}
 
 		public async Task RemoveTable<T>(T table) where T : ITable
 		{
 			await _databaseContext.DeleteAsync(table);
 
-			DatabaseInteractionCompleted?.Invoke(this, new DatabaseInteractionEventArgs(table));
+			TableRemoved?.Invoke(this, new TableRemovedEventArgs(table));
 		}
 
 		public async Task<List<T>> GetTablesList<T>() where T : ITable

@@ -1,4 +1,5 @@
 ﻿using DiscordBot.Configs;
+using DiscordBot.Extensions;
 using DiscordBot.Server;
 using DiscordBot.Server.Commands;
 using DiscordBot.Server.Database;
@@ -46,14 +47,21 @@ namespace DiscordBot
 
 		private static void InitializeServerServiceScope(IServiceCollection serviceCollection)
 		{
+			serviceCollection.AddScoped<ServerContext>();
 			serviceCollection.AddScoped<IServerServiceAccessor, ServerServiceAccessor>();
 			serviceCollection.AddScoped<ServerService>();
 			serviceCollection.AddScoped<ServerDatabaseConnector>();
 			serviceCollection.AddScoped<ServerDatabaseManager>();
-			serviceCollection.AddScoped<ServerConfig>(container => container.GetService<ServerService>().ServerConfig);
+			serviceCollection.AddScoped<ServerDatabaseEventHandler>();
 
 			serviceCollection.AddScoped<ServerGlobalCommands>();
 			serviceCollection.AddScoped<ServerGlobalCommandsManager>();
+
+			serviceCollection.AddScoped(container =>
+			{
+				var serverContext = container.GetService<ServerContext>();
+				return ServerConfig.LoadOrCreate(Path.Combine(serverContext.RootServerPath, "config.json"));
+			});
 		}
 
 		private static void InitializeBotEnvironmentDirectories()

@@ -29,9 +29,12 @@ namespace DiscordBot
 				var scope = _serviceProvider.CreateScope();
 				var accessor = (ServerServiceAccessor) scope.ServiceProvider.GetService<IServerServiceAccessor>();
 
+				var serverContext = scope.ServiceProvider.GetService<ServerContext>();
+				serverContext.Setup(serverId);
+
 				var serverService = scope.ServiceProvider.GetService<ServerService>();
                 accessor.SetService(serverService);
-                serverService.Initialize(serverId);                	
+				serverService.Initialize();
 
 				return serverService;
 			});

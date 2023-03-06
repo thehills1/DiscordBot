@@ -6,49 +6,39 @@ namespace DiscordBot.Server
 {
 	public class ServerService
 	{
-		private readonly string ServerDataPath = "data";
-
-		private ulong _serverId;
-		private ServerConfig _serverConfig;
-
-		public ulong ServerId => _serverId;
-		public ServerConfig ServerConfig => _serverConfig;
-
-		public string RootServerPath => Path.Combine(BotEnvironment.ServersDirectoryPath, _serverId.ToString());
-		public string ModeratorsWorksheetsPath => Path.Combine(RootServerPath, ServerDataPath, "ModeratorsWorksheets");
-		public string SalaryWorksheetsPath => Path.Combine(RootServerPath, ServerDataPath, "SalaryWorksheets");
-
 		public ServerGlobalCommands ServerGlobalCommands { get; }
-		public ServerDatabaseManager DatabaseManager { get; }
 
-		public ServerService(ServerGlobalCommands serverGlobalCommands, ServerDatabaseManager databaseManager) 
+		private readonly ServerDatabaseManager _databaseManager;
+		private readonly ServerDatabaseEventHandler _databaseEventHandler;
+		private readonly ServerContext _serverContext;
+
+		public ServerService(
+			ServerGlobalCommands serverGlobalCommands, 
+			ServerDatabaseManager databaseManager,
+			ServerDatabaseEventHandler databaseEventHandler,
+			ServerContext serverContext) 
 		{
 			ServerGlobalCommands = serverGlobalCommands;
-			DatabaseManager = databaseManager;
+			_databaseManager = databaseManager;
+			_databaseEventHandler = databaseEventHandler;
+			_serverContext = serverContext;
 		}
 
-		public void Initialize(ulong serverId)
+		public void Initialize()
 		{
-			_serverId = serverId;
-
-			LoadConfig();
-			DatabaseManager.Initialize();
+			_databaseManager.Initialize();
 			InitializeServerDirectories();
+			_databaseEventHandler.Initialize();
 
-			Console.WriteLine($"Server service for server with id: [{serverId}] was initialized.");
-		}
-
-		private void LoadConfig()
-		{
-			_serverConfig = ServerConfig.LoadOrCreate(Path.Combine(RootServerPath, "config.json"));
+			Console.WriteLine($"Server service for server with id: [{_serverContext.ServerId}] was initialized.");
 		}
 
 		private void InitializeServerDirectories()
 		{
 			var directoriesToInitialize = new string[]
 			{
-				ModeratorsWorksheetsPath,
-				SalaryWorksheetsPath
+				_serverContext.ModeratorsWorksheetsPath,
+				_serverContext.SalaryWorksheetsPath
 			};
 
 			foreach (var directory in directoriesToInitialize)

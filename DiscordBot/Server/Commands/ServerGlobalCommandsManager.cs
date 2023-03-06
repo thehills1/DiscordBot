@@ -7,6 +7,7 @@ using DiscordBot.Database.Tables;
 using DiscordBot.Extensions;
 using DiscordBot.Extensions.Collections;
 using DiscordBot.Extensions.Excel;
+using DiscordBot.Server.Database;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using Newtonsoft.Json;
@@ -18,17 +19,23 @@ namespace DiscordBot.Server.Commands
 	public class ServerGlobalCommandsManager
 	{
 		private readonly Bot _bot;
-		private readonly IServerServiceAccessor _serverServiceAccessor;
+		private readonly ServerContext _serverContext;
+		private readonly ServerDatabaseManager _databaseManager;
 		private readonly SalaryConfig _salaryConfig;
+		private readonly ServerConfig _serverConfig;
 
 		public ServerGlobalCommandsManager(
 			Bot bot,
-			IServerServiceAccessor serverServiceAccessor,
-			SalaryConfig salaryConfig)
+			ServerContext serverContext,
+			ServerDatabaseManager databaseManager,
+			SalaryConfig salaryConfig,
+			ServerConfig serverConfig)
 		{
 			_bot = bot;
-			_serverServiceAccessor = serverServiceAccessor;
+			_serverContext = serverContext;
+			_databaseManager = databaseManager;
 			_salaryConfig = salaryConfig;
+			_serverConfig = serverConfig;
 		}
 
 		public bool TryAddModeratorTable(
@@ -65,7 +72,7 @@ namespace DiscordBot.Server.Commands
                 ForumLink = forumLink
 			};
 
-			_serverServiceAccessor.Service.DatabaseManager.AddOrUpdateTableDB(table);
+			_databaseManager.AddOrUpdateTableDB(table);
 
             message = $"Добавил {user.Mention} в список модераторов.";
             return true;
@@ -103,7 +110,7 @@ namespace DiscordBot.Server.Commands
 			}
 
 			table.PermissionLevel = permissionLevel;
-			_serverServiceAccessor.Service.DatabaseManager.AddOrUpdateTableDB(table);
+			_databaseManager.AddOrUpdateTableDB(table);
 
 			message = $"Вы изменили уровень модератора {user.Mention} на **{permissionLevel}.**\nСменить покрас: {table.ForumLink}";
 			return true;
@@ -122,7 +129,7 @@ namespace DiscordBot.Server.Commands
 			}
 
 			table.Reprimands++;
-			_serverServiceAccessor.Service.DatabaseManager.AddOrUpdateTableDB(table);
+			_databaseManager.AddOrUpdateTableDB(table);
 
 			message = $"Вы выдали модератору {user.Mention} предупреждение. " +
 				$"\nТекущее количество предупреждений модератора: **{table.Reprimands}/{ModeratorTable.ReprimandsLimit}.**";
@@ -154,7 +161,7 @@ namespace DiscordBot.Server.Commands
 					break;
 			}
 
-			_serverServiceAccessor.Service.DatabaseManager.AddOrUpdateTableDB(table);
+			_databaseManager.AddOrUpdateTableDB(table);
 
 			message = $"Вы изменили данные модератора {user.Mention}. " +
 				$"\nБыли изменены данные: **{property}.** " +
@@ -168,7 +175,7 @@ namespace DiscordBot.Server.Commands
 
 			var tables = new List<ITableCollection>();
 
-			var modTables = _serverServiceAccessor.Service.DatabaseManager
+			var modTables = _databaseManager
 				.GetTablesList<ModeratorTable>().Result
 				.OrderByDescending(table => table.PermissionLevel).ToList();
 
@@ -176,14 +183,14 @@ namespace DiscordBot.Server.Commands
 
 			if (allTables)
 			{
-				var dismissedModTables = _serverServiceAccessor.Service.DatabaseManager
+				var dismissedModTables = _databaseManager
 					.GetTablesList<DismissedModeratorTable>().Result
 					.OrderBy(table => table.DismissionDate).ToList();
 
 				tables.Add(new TableCollection<DismissedModeratorTable>(dismissedModTables));
 			}
 
-			var fileName = Path.Combine(_serverServiceAccessor.Service.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".")}.xlsx");
+			var fileName = Path.Combine(_serverContext.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".")}.xlsx");
 			var messageContent = "Актуальный список модераторов:";
 
 			var lastMessages = channel.GetMessagesAsync().Result;
@@ -211,8 +218,8 @@ namespace DiscordBot.Server.Commands
 		{
 			message = "";
 
-			var channelToDownload = _bot.GetChannelAsync(_serverServiceAccessor.Service.ServerConfig.BotStatsChannelId).Result;
-			var channelToSend = _bot.GetChannelAsync(_serverServiceAccessor.Service.ServerConfig.StatsChannelId).Result;
+			var channelToDownload = _bot.GetChannelAsync(_serverConfig.BotStatsChannelId).Result;
+			var channelToSend = _bot.GetChannelAsync(_serverConfig.StatsChannelId).Result;
 
 			var moderatorsActions = GetModeratorsActions(
 					channelToDownload, 
@@ -220,12 +227,12 @@ namespace DiscordBot.Server.Commands
 					out var periodEndDate, 
 					weeks);
 
-			CheckAndRemoveExtraModeratorsActions(moderatorsActions, weeks, out var totalActions);
-			var salaryTables = CalculateSalary(moderatorsActions, weeks, totalActions, periodStartDate, periodEndDate);
+			var sortedActions = SortAndRemoveExtraModeratorsActions(moderatorsActions, weeks, out var totalActions);
+			var salaryTables = CalculateSalary(sortedActions, weeks, totalActions, periodStartDate, periodEndDate);
 
 			var datesString = $"{periodStartDate.ToShortDateString()} - {periodEndDate.ToShortDateString()}";
 
-			var fileName = Path.Combine(_serverServiceAccessor.Service.SalaryWorksheetsPath, $"salary {datesString}.xlsx");
+			var fileName = Path.Combine(_serverContext.SalaryWorksheetsPath, $"salary {datesString}.xlsx");
 			ExcelWorksheetCreator.GenerateAndSaveFile(new() { salaryTables }, fileName);
 
 			using (var fileStream = new FileStream(fileName, FileMode.Open))
@@ -237,7 +244,7 @@ namespace DiscordBot.Server.Commands
 					.Result;
 			}
 
-			message = $"Лист зарплатой был успешно отправлен в канал {channelToSend.Mention}.";
+			message = $"Лист с зарплатой был успешно отправлен в канал {channelToSend.Mention}.";
 			return true;
 		}
 
@@ -280,89 +287,105 @@ namespace DiscordBot.Server.Commands
 			return moderatorsActions;
 		}
 
-		private void CheckAndRemoveExtraModeratorsActions(Dictionary<ulong, int> actions, int weeks, out int totalActions)
+		private Dictionary<ServerName, Dictionary<ModeratorTable, int>> SortAndRemoveExtraModeratorsActions(
+			Dictionary<ulong, int> actions, 
+			int weeks, 
+			out Dictionary<ServerName, int> totalActions)
 		{
-			totalActions = 0;
+			var sortedActions = new Dictionary<ServerName, Dictionary<ModeratorTable, int>>();
+			totalActions = new Dictionary<ServerName, int>();
 
 			foreach (var moderatorAction in actions)
 			{
-				var table = _serverServiceAccessor.Service.DatabaseManager.GetTable<ModeratorTable>(moderatorAction.Key).Result;
+				var table = _databaseManager.GetTable<ModeratorTable>(moderatorAction.Key).Result;
+				if (table == null) continue;
 
-				if (table == null)
+				if (!sortedActions.ContainsKey(table.ServerName))
 				{
-					actions.Remove(moderatorAction.Key);
-					continue;
+					sortedActions.Add(table.ServerName, new Dictionary<ModeratorTable, int>());
 				}
+
+				sortedActions[table.ServerName].Add(table, moderatorAction.Value);
+
 
 				if (table.PermissionLevel <= PermissionLevel.Curator 
 					&& moderatorAction.Value >= _salaryConfig.ActionsPerWeekToSalary * weeks)
 				{
-					totalActions += moderatorAction.Value;
+					if (!totalActions.TryAdd(table.ServerName, moderatorAction.Value))
+					{
+						totalActions[table.ServerName] += moderatorAction.Value;
+					}
 				}
 			}
+
+			return sortedActions;
 		}
 
 		private TableCollection<ModeratorSalaryTable> CalculateSalary(
-			Dictionary<ulong, int> actions, 
+			Dictionary<ServerName, Dictionary<ModeratorTable, int>> actions, 
 			int weeks, 
-			int totalActions,
+			Dictionary<ServerName, int> totalActions,
 			DateTime periodStartDate,
 			DateTime periodEndDate)
 		{
 			var output = new List<ModeratorSalaryTable>();
 
-			foreach (var moderatorAction in actions) 
+			foreach (var actionsByServer in actions) 
 			{
-				var moderatorTable = _serverServiceAccessor.Service.DatabaseManager.GetTable<ModeratorTable>(moderatorAction.Key).Result;
-				var salary = CalculateChiefsSalary(moderatorTable);
-
-				if (moderatorTable.PermissionLevel <= PermissionLevel.Curator)
+				foreach (var moderatorActions in actionsByServer.Value)
 				{
-					salary += CalculateActionsSalary(moderatorAction.Value, weeks, totalActions);
-                }
+					var moderatorTable = moderatorActions.Key;
+					var salary = CalculateChiefsSalary(moderatorTable, weeks);
 
-				var salaryTable = new ModeratorSalaryTable()
-				{
-					Id = moderatorAction.Key,
-					User = moderatorTable.User,
-					ServerName = moderatorTable.ServerName,
-					BankNumber = moderatorTable.BankNumber,
-					ActionsCount = moderatorAction.Value,
-					Salary = salary,
-					PeriodStartDate = periodStartDate,
-					PeriodEndDate = periodEndDate
-				};
+					if (moderatorTable.PermissionLevel <= PermissionLevel.Curator)
+					{
+						salary += CalculateActionsSalary(actionsByServer.Key, moderatorActions.Value, weeks, totalActions[actionsByServer.Key]);
+					}
 
-				_serverServiceAccessor.Service.DatabaseManager.AddTableDB(salaryTable);
+					var salaryTable = new ModeratorSalaryTable()
+					{
+						Id = moderatorTable.Id,
+						User = moderatorTable.User,
+						ServerName = moderatorTable.ServerName,
+						BankNumber = moderatorTable.BankNumber,
+						ActionsCount = moderatorActions.Value,
+						Salary = salary,
+						PeriodStartDate = periodStartDate,
+						PeriodEndDate = periodEndDate
+					};
 
-				output.Add(salaryTable);
+					_databaseManager.AddTableDB(salaryTable);
+
+					output.Add(salaryTable);
+				}
+
 			}
 
 			return new TableCollection<ModeratorSalaryTable>(output);
 		}
 
-		private int CalculateChiefsSalary(ModeratorTable table)
+		private int CalculateChiefsSalary(ModeratorTable table, int weeks)
 		{
 			if (table.PermissionLevel < PermissionLevel.Curator) return 0;
 
 			switch (table.PermissionLevel)
 			{
 				case PermissionLevel.Curator:
-					return _salaryConfig.ChiefsSalary.CuratorSalary;
+					return _salaryConfig.ChiefsSalary[table.ServerName].Curator * weeks;
 				case PermissionLevel.DeputyChiefModerator:
-					return _salaryConfig.ChiefsSalary.DeputyChiefModeratorSalary;
+					return _salaryConfig.ChiefsSalary[table.ServerName].DeputyChiefModerator * weeks;
 				case PermissionLevel.ChiefModerator:
-					return _salaryConfig.ChiefsSalary.ChiefModeratorSalary;
+					return _salaryConfig.ChiefsSalary[table.ServerName].ChiefModerator * weeks;
 				default:
 					return 0;
 			}
 		}
 
-		private int CalculateActionsSalary(int moderatorActions, int weeks, int totalActions)
+		private int CalculateActionsSalary(ServerName server, int moderatorActions, int weeks, int totalActions)
 		{
 			if (moderatorActions < _salaryConfig.ActionsPerWeekToSalary * weeks) return 0;
 
-			var raw = (int) Math.Ceiling((double) moderatorActions / totalActions * _salaryConfig.Sum * weeks);
+			var raw = (int) Math.Ceiling((double) moderatorActions / totalActions * _salaryConfig.Sum[server] * weeks);
 			return (int) Math.Floor((double) raw / 1000) * 1000;
         }
 
@@ -455,7 +478,7 @@ namespace DiscordBot.Server.Commands
 		{
 			message = "";
 
-			_serverServiceAccessor.Service.DatabaseManager.RemoveTable(table).GetResult();
+			_databaseManager.RemoveTable(table).GetResult();
 
 			var dismissedTable = new DismissedModeratorTable()
 			{
@@ -471,7 +494,7 @@ namespace DiscordBot.Server.Commands
 				ForumLink = table.ForumLink
 			};
 
-			_serverServiceAccessor.Service.DatabaseManager.AddOrUpdateTableDB(dismissedTable);
+			_databaseManager.AddOrUpdateTableDB(dismissedTable);
 
 			message = $"Вы сняли {table.Id.GetMention(MentionType.Username)} с поста модератора по причине: {dismissionReason}.";
 			message += table.PermissionLevel >= PermissionLevel.Moderator ? $"\nСнять покрас: {table.ForumLink}" : null;
@@ -484,7 +507,7 @@ namespace DiscordBot.Server.Commands
 		{
 			message = "";
 			
-			table = _serverServiceAccessor.Service.DatabaseManager.GetTable<ModeratorTable>(id).Result;
+			table = _databaseManager.GetTable<ModeratorTable>(id).Result;
 
 			bool result = table == null;
 			if (result)

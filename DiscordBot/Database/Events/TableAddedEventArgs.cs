@@ -2,11 +2,11 @@
 
 namespace DiscordBot.Database.Events
 {
-	public class DatabaseInteractionEventArgs : EventArgs
+	public class TableAddedEventArgs : EventArgs
 	{
 		public ITable Table { get; set; }
 
-		public DatabaseInteractionEventArgs(ITable table)
+		public TableAddedEventArgs(ITable table)
 		{
 			Table = table;
 		}

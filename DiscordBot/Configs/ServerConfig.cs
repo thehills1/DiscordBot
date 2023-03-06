@@ -2,8 +2,6 @@
 {
 	public class ServerConfig : BaseConfig<ServerConfig>
 	{
-		public ulong ServerId { get; set; }
-
 		/// <summary>
 		/// Id канала с информацией.
 		/// </summary>
@@ -18,5 +16,10 @@
 		/// Id канала с общей статистикой.
 		/// </summary>
 		public ulong StatsChannelId { get; set; }
+
+		/// <summary>
+		/// Id канала главной модерации.
+		/// </summary>
+		public ulong HeadModChannelId { get; set; }
 	}
 }
