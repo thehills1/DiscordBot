@@ -31,5 +31,7 @@ namespace DiscordBot.Commands
 		Task SendStaffInfo(InteractionContext context, DiscordChannel channel, bool allTables);
 
 		Task SendExcelSalaryWorksheet(InteractionContext context, long weeks);
+
+		Task GetModeratorSalaryInfo(InteractionContext context, DiscordUser user = null);
 	}
 }

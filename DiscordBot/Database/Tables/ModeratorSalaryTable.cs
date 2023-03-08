@@ -29,10 +29,8 @@ namespace DiscordBot.Database.Tables
 		[ExcelColumn("Зарплата")]
 		public int Salary { get; set; }
 
-		[ExcelColumn("Начало расчетного периода")]
 		public DateTime PeriodStartDate { get; set; }
 
-		[ExcelColumn("Конец расчетного периода")]
 		public DateTime PeriodEndDate { get; set; }
 
 		public string[] GetMap()

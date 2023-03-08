@@ -93,6 +93,16 @@ namespace DiscordBot.Server.Commands
 			SendCommandExecutionResult(context, result, message);
 		}
 
+		public async Task GetModeratorSalaryInfo(InteractionContext context, DiscordUser user = null)
+		{
+			await context.DeferAsync(true);
+
+			var author = user == null;
+			var result = _commandsManager.TryGetModeratorSalaryInfo(author ? context.User.Id : user.Id, author, out var message);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
 		private async void SendCommandExecutionResult(InteractionContext context, bool result, string message)
 		{
 			if (result)

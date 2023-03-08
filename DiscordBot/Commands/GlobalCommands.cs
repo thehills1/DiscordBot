@@ -85,5 +85,14 @@ namespace DiscordBot.Commands
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.SendExcelSalaryWorksheet(context, weeks);
 		}
+
+		[SlashCommand("salaryinfo", "Вывод информацию о полученной зарплате за всё время.", false)]
+		public async Task GetModeratorSalaryInfo(
+			InteractionContext context,
+			[Option("User", "Пользователь")] DiscordUser user = null)
+		{
+			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+				.GetModeratorSalaryInfo(context, user);
+		}
 	}
 }

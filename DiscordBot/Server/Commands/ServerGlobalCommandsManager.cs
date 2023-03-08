@@ -169,24 +169,18 @@ namespace DiscordBot.Server.Commands
 			return true;
 		}
 
-		public bool TrySendExcelStaffWorksheet(DiscordChannel channel, bool allTables, out string message)
+		public bool TrySendExcelStaffWorksheet(DiscordChannel channel, bool allTables, out string message, bool pinMessage = false)
 		{
 			message = "";
 
 			var tables = new List<ITableCollection>();
 
-			var modTables = _databaseManager
-				.GetTablesList<ModeratorTable>().Result
-				.OrderByDescending(table => table.PermissionLevel).ToList();
-
+			var modTables = _databaseManager.GetMultyDataDBDesc<ModeratorTable, PermissionLevel>(table => table.PermissionLevel).Result;
 			tables.Add(new TableCollection<ModeratorTable>(modTables));
 
 			if (allTables)
 			{
-				var dismissedModTables = _databaseManager
-					.GetTablesList<DismissedModeratorTable>().Result
-					.OrderBy(table => table.DismissionDate).ToList();
-
+				var dismissedModTables = _databaseManager.GetMultyDataDBAsc<DismissedModeratorTable, DateTime>(table => table.DismissionDate).Result;
 				tables.Add(new TableCollection<DismissedModeratorTable>(dismissedModTables));
 			}
 
@@ -207,7 +201,13 @@ namespace DiscordBot.Server.Commands
 
 			using (var fileStream = new FileStream(fileName, FileMode.Open))
 			{
-				_ = new DiscordMessageBuilder().WithContent(messageContent).AddFile(fileStream).SendAsync(channel).Result;
+				var sentMessage = new DiscordMessageBuilder()
+					.WithContent(messageContent)
+					.AddFile(fileStream)
+					.SendAsync(channel)
+					.Result;
+
+				if (pinMessage) sentMessage.PinAsync().GetResult();
 			}
 
 			message = $"Лист с таблицами был успешно отправлен в канал {channel.Mention}.";
@@ -388,6 +388,36 @@ namespace DiscordBot.Server.Commands
 			var raw = (int) Math.Ceiling((double) moderatorActions / totalActions * _salaryConfig.Sum[server] * weeks);
 			return (int) Math.Floor((double) raw / 1000) * 1000;
         }
+
+		public bool TryGetModeratorSalaryInfo(ulong id, bool author, out string message)
+		{
+			message = "";
+
+			if (CheckModeratorTableNotExists(id, out _, out message)) return false;
+
+			var salaryTables = _databaseManager.GetMultyDataDB<ModeratorSalaryTable>(table => table.Id == id).Result;
+			if (salaryTables == null)
+			{
+				message = author ? "Вы ещё не получали зарплату." : "Зарплата данному пользователю ещё не выплачивалась.";
+				return false;
+			}
+
+			var stringBuilder = new StringBuilder();
+			stringBuilder.AppendLine(author 
+				? "**Ваша зарплата за всё время:**" 
+				: $"**Зарплата пользователя {id.GetMention(MentionType.Username)} за всё время:**");
+			stringBuilder.AppendLine();
+
+			foreach (var table in salaryTables)
+			{
+				stringBuilder.AppendLine($"**С {table.PeriodStartDate.ToShortDateString()} " +
+					$"по {table.PeriodEndDate.ToShortDateString()}:** " +
+					$"{table.Salary} на сервере **{table.ServerName}.**");
+			}
+
+			message = stringBuilder.ToString();
+			return true;
+		}
 
 		private bool TryEditSid(ModeratorTable table, string value, out string message)
 		{

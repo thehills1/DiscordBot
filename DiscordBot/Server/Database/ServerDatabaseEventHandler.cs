@@ -68,7 +68,8 @@ namespace DiscordBot.Server.Database
 				_commandsManager.TrySendExcelStaffWorksheet(
 					_bot.GetChannelAsync(_serverConfig.HeadModChannelId).Result,
 					false,
-					out _);
+					out _,
+					true);
 			}
 		}
 	}

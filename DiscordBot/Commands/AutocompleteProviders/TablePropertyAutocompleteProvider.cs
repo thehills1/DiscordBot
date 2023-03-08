@@ -16,7 +16,7 @@ namespace DiscordBot.Commands.AutocompleteProviders
 			foreach (var property in properties)
 			{
 				var excelColumnAttribute = Attribute.GetCustomAttribute(property, typeof(ExcelColumnAttribute)) as ExcelColumnAttribute;
-				Choices.Add(new DiscordAutoCompleteChoice(excelColumnAttribute.Name ?? property.Name, property.Name));
+				Choices.Add(new DiscordAutoCompleteChoice(excelColumnAttribute?.Name ?? property.Name, property.Name));
 			}
 
 			return Choices;

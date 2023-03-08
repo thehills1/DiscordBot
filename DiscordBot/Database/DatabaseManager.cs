@@ -54,9 +54,34 @@ namespace DiscordBot.Database
 			TableRemoved?.Invoke(this, new TableRemovedEventArgs(table));
 		}
 
-		public async Task<List<T>> GetTablesList<T>() where T : ITable
+		public async Task<List<T>> GetMultyDataDB<T>() where T : ITable
 		{
 			return await _databaseContext.Query<T>().ToListAsync();
+		}
+
+		public async Task<List<T>> GetMultyDataDB<T>(Expression<Func<T, bool>> selector) where T : ITable
+		{
+			return await _databaseContext.Query<T>().Where(selector).ToListAsync();
+		}
+
+		public async Task<List<T>> GetMultyDataDBAsc<T, TOrder>(Expression<Func<T, TOrder>> orderSelector) where T : ITable
+		{
+			return await _databaseContext.Query<T>().OrderBy(orderSelector).ToListAsync();
+		}
+
+		public async Task<List<T>> GetMultyDataDBDesc<T, TOrder>(Expression<Func<T, TOrder>> orderSelector) where T : ITable
+		{
+			return await _databaseContext.Query<T>().OrderByDesc(orderSelector).ToListAsync();
+		}
+
+		public async Task<List<T>> GetMultyDataDBAsc<T, TOrder>(Expression<Func<T, bool>> selector, Expression<Func<T, TOrder>> orderSelector) where T : ITable
+		{
+			return await _databaseContext.Query<T>().Where(selector).OrderBy(orderSelector).ToListAsync();
+		}
+
+		public async Task<List<T>> GetMultyDataDBDesc<T, TOrder>(Expression<Func<T, bool>> selector, Expression<Func<T, TOrder>> orderSelector) where T : ITable
+		{
+			return await _databaseContext.Query<T>().Where(selector).OrderByDesc(orderSelector).ToListAsync();
 		}
 
 		public async Task<T> GetTableDB<T>(Expression<Func<T, bool>> selector) where T : ITable
