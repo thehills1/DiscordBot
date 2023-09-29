@@ -7,7 +7,7 @@ namespace DiscordBot.Extensions
 	{
 		public static string GetUser(this DiscordUser user)
 		{
-			return $"{user.Username}#{user.Discriminator}";
+			return user.Discriminator == "0" ? $"{user.Username}" : $"{user.Username}#{user.Discriminator}";
 		}
 
 		public static string GetMention(this ulong id, MentionType mentionType)

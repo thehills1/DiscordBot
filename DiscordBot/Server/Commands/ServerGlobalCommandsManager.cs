@@ -112,7 +112,7 @@ namespace DiscordBot.Server.Commands
 			table.PermissionLevel = permissionLevel;
 			_databaseManager.AddOrUpdateTableDB(table);
 
-			message = $"Вы изменили уровень модератора {user.Mention} на **{permissionLevel}.**\nСменить покрас: {table.ForumLink}";
+			message = $"Вы изменили уровень модератора {user.Mention} на **{permissionLevel}.**";
 			return true;
 		}
 
@@ -178,9 +178,11 @@ namespace DiscordBot.Server.Commands
 			var modTables = _databaseManager.GetMultyDataDBDesc<ModeratorTable, PermissionLevel>(table => table.PermissionLevel).Result;
 			tables.Add(new TableCollection<ModeratorTable>(modTables));
 
+			UpdateActualUsernames(modTables);
+
 			if (allTables)
 			{
-				var dismissedModTables = _databaseManager.GetMultyDataDBAsc<DismissedModeratorTable, DateTime>(table => table.DismissionDate).Result;
+				var dismissedModTables = _databaseManager.GetMultyDataDB<DismissedModeratorTable>().Result.OrderBy(table => table.DismissionDate).ToList();
 				tables.Add(new TableCollection<DismissedModeratorTable>(dismissedModTables));
 			}
 
@@ -364,6 +366,20 @@ namespace DiscordBot.Server.Commands
 			return new TableCollection<ModeratorSalaryTable>(output);
 		}
 
+		private void UpdateActualUsernames(List<ModeratorTable> tables)
+		{
+			foreach (ModeratorTable table in tables)
+			{
+				var user = _bot.GetUserAsync(table.Id).Result;
+				var actualUsername = user.GetUser();
+				if (table.User == actualUsername) continue;
+
+				table.User = actualUsername;
+
+				_databaseManager.AddOrUpdateTableDB(table);
+			}
+		}
+
 		private int CalculateChiefsSalary(ModeratorTable table, int weeks)
 		{
 			if (table.PermissionLevel < PermissionLevel.Curator) return 0;
@@ -517,6 +533,7 @@ namespace DiscordBot.Server.Commands
 				PermissionLevel = table.PermissionLevel,
 				Nickname = table.Nickname,
 				Sid = table.Sid,
+				ServerName = table.ServerName,
 				DecisionDate = table.DecisionDate,
 				DismissionDate = DateTime.Now,
 				Reason = dismissionReason,
@@ -527,7 +544,6 @@ namespace DiscordBot.Server.Commands
 			_databaseManager.AddOrUpdateTableDB(dismissedTable);
 
 			message = $"Вы сняли {table.Id.GetMention(MentionType.Username)} с поста модератора по причине: {dismissionReason}.";
-			message += table.PermissionLevel >= PermissionLevel.Moderator ? $"\nСнять покрас: {table.ForumLink}" : null;
 		}
 
 		private bool CheckModeratorTableExists(ulong id, out ModeratorTable table, out string message)
@@ -582,7 +598,7 @@ namespace DiscordBot.Server.Commands
 		{
 			message = "";
 
-			if (!forumLink.Contains("forum.robo-hamster.com"))
+			if (!forumLink.Contains("forum.arizona-v.com"))
 			{
 				message = "Некорректная ссылка на форумный аккаунт.";
 				return true;
