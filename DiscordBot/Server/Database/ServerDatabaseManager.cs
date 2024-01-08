@@ -17,6 +17,6 @@ namespace DiscordBot.Server.Database
 		public async Task<T> GetTable<T>(ulong id) where T : BaseTable
 		{
 			return await GetTableDB<T>(obj => obj.Id == id);
-		}	
+		}
 	}
 }

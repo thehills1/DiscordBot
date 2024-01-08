@@ -21,11 +21,12 @@ namespace DiscordBot
 		public async void Initialize()
 		{
 			ExcelPackage.LicenseContext = LicenseContext.Commercial;
-
+			
 			SetupCommandsRegistration();
-
 			await RunAsync();
 		}
+
+		public async Task<DiscordMessage> GetMessageAsync(ulong channelId, ulong messageId) => await (await GetChannelAsync(channelId)).GetMessageAsync(messageId);
 
 		public async Task<DiscordChannel> GetChannelAsync(ulong id) => await _client.GetChannelAsync(id);
 
@@ -42,6 +43,7 @@ namespace DiscordBot
 		private async Task RegisterCommandsAndUpdate(SlashCommandsExtension cmds, ulong guildId)
 		{
 			cmds.RegisterCommands<GlobalCommands>(guildId);
+			cmds.RegisterCommands<ShopCommands>(guildId);
 			await cmds.RefreshCommands();
 		}
 

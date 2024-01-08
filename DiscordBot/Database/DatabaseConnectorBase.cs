@@ -29,6 +29,8 @@ namespace DiscordBot.Database
 				TableHelper.InitTable<ModeratorTable>(context);
 				TableHelper.InitTable<DismissedModeratorTable>(context);
 				TableHelper.InitTable<ModeratorSalaryTable>(context);
+				TableHelper.InitTable<ShopTable>(context);
+				TableHelper.InitTable<ShopListMessageTable>(context);
 			}
 			catch (Exception e)
 			{

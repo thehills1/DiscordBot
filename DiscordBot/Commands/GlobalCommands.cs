@@ -94,5 +94,12 @@ namespace DiscordBot.Commands
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.GetModeratorSalaryInfo(context, user);
 		}
+
+		[SlashCommand("setnorm", "Изменить норму наказаний в неделю.", false)]
+		public async Task SetNorm(InteractionContext context, [Option("Count", "Количество действий за неделю")] long count)
+		{
+			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+				.SetNorm(context, count);
+		}
 	}
 }

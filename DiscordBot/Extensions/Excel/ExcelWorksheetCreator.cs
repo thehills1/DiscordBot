@@ -1,7 +1,5 @@
 ﻿using DiscordBot.Database.Enums;
-using DiscordBot.Database.Tables;
 using DiscordBot.Extensions.Collections;
-using Microsoft.Win32.SafeHandles;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 

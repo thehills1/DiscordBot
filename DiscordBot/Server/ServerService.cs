@@ -7,26 +7,29 @@ namespace DiscordBot.Server
 	public class ServerService
 	{
 		public ServerGlobalCommands ServerGlobalCommands { get; }
+		public ServerShopCommands ServerShopCommands { get; }
+		public ServerDatabaseManager DatabaseManager { get; }
 
-		private readonly ServerDatabaseManager _databaseManager;
 		private readonly ServerDatabaseEventHandler _databaseEventHandler;
 		private readonly ServerContext _serverContext;
 
 		public ServerService(
-			ServerGlobalCommands serverGlobalCommands, 
+			ServerGlobalCommands serverGlobalCommands,
+			ServerShopCommands serverShopCommands,
 			ServerDatabaseManager databaseManager,
 			ServerDatabaseEventHandler databaseEventHandler,
 			ServerContext serverContext) 
 		{
 			ServerGlobalCommands = serverGlobalCommands;
-			_databaseManager = databaseManager;
+			ServerShopCommands = serverShopCommands;
+			DatabaseManager = databaseManager;
 			_databaseEventHandler = databaseEventHandler;
 			_serverContext = serverContext;
 		}
 
 		public void Initialize()
 		{
-			_databaseManager.Initialize();
+			DatabaseManager.Initialize();
 			InitializeServerDirectories();
 			_databaseEventHandler.Initialize();
 

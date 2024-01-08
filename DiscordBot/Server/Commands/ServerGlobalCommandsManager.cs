@@ -201,6 +201,8 @@ namespace DiscordBot.Server.Commands
 
 			ExcelWorksheetCreator.GenerateAndSaveFile(tables, fileName);
 
+			if (!File.Exists(fileName)) return false;
+
 			using (var fileStream = new FileStream(fileName, FileMode.Open))
 			{
 				var sentMessage = new DiscordMessageBuilder()
@@ -247,6 +249,23 @@ namespace DiscordBot.Server.Commands
 			}
 
 			message = $"Лист с зарплатой был успешно отправлен в канал {channelToSend.Mention}.";
+			return true;
+		}
+
+		public bool TrySetNorm(int count, out string message)
+		{
+			message = "";
+
+			if (count < 0)
+			{
+				message = "Количество действий не может быть меньше нуля.";
+				return false;
+			}
+
+			_salaryConfig.ActionsPerWeekToSalary = count;
+			_salaryConfig.Save();
+
+			message = $"Норма наказаний успешно изменена на **{count}** в неделю.";
 			return true;
 		}
 

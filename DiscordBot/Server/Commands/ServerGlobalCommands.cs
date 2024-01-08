@@ -103,6 +103,15 @@ namespace DiscordBot.Server.Commands
 			SendCommandExecutionResult(context, result, message);
 		}
 
+		public async Task SetNorm(InteractionContext context, long count)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TrySetNorm((int) count, out var message);
+
+			SendCommandExecutionResult(context, result, message);
+		}
+
 		private async void SendCommandExecutionResult(InteractionContext context, bool result, string message)
 		{
 			if (result)

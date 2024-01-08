@@ -33,5 +33,7 @@ namespace DiscordBot.Commands
 		Task SendExcelSalaryWorksheet(InteractionContext context, long weeks);
 
 		Task GetModeratorSalaryInfo(InteractionContext context, DiscordUser user = null);
+
+		Task SetNorm(InteractionContext context, long count);
 	}
 }

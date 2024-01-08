@@ -1,5 +1,4 @@
 ﻿using DiscordBot.Configs;
-using DiscordBot.Extensions;
 using DiscordBot.Server;
 using DiscordBot.Server.Commands;
 using DiscordBot.Server.Database;
@@ -17,6 +16,7 @@ namespace DiscordBot
 
 			serviceCollection.AddSingleton<ServiceManager>();
 			serviceCollection.AddSingleton<Bot>();
+			serviceCollection.AddSingleton<MessageManager>();
 			serviceCollection.AddSingleton(container =>
 			{
 				var config = serviceCollection.BuildServiceProvider().GetService<BotConfig>();
@@ -32,7 +32,7 @@ namespace DiscordBot
 			});
 
 			serviceCollection.AddSingleton(container => BotConfig.LoadOrCreate("config.json"));
-			serviceCollection.AddSingleton(container => SalaryConfig.LoadOrCreate("salary_config.json"));
+			serviceCollection.AddSingleton(container => SalaryConfig.LoadOrCreate("salary_config.json"));		
 
 			InitializeServerServiceScope(serviceCollection);
 			InitializeBotEnvironmentDirectories();
@@ -57,10 +57,19 @@ namespace DiscordBot
 			serviceCollection.AddScoped<ServerGlobalCommands>();
 			serviceCollection.AddScoped<ServerGlobalCommandsManager>();
 
+			serviceCollection.AddScoped<ServerShopCommands>();
+			serviceCollection.AddScoped<ServerShopCommandsManager>();
+
 			serviceCollection.AddScoped(container =>
 			{
 				var serverContext = container.GetService<ServerContext>();
 				return ServerConfig.LoadOrCreate(Path.Combine(serverContext.RootServerPath, "config.json"));
+			});
+
+			serviceCollection.AddScoped(container =>
+			{
+				var serverContext = container.GetService<ServerContext>();
+				return ShopsConfig.LoadOrCreate(Path.Combine(serverContext.RootServerPath, "shops_config.json"));
 			});
 		}
 
