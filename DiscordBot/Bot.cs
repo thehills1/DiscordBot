@@ -118,6 +118,11 @@ namespace DiscordBot
 			await message.DeleteAsync();
 		}
 
+		public async Task DeleteMessageAsync(DiscordChannel channel, ulong messageId)
+		{
+			await (await channel.GetMessageAsync(messageId)).DeleteAsync();
+		}
+
 		public async Task DeleteMessageAsync(ulong channelId, ulong messageId)
 		{
 			await (await GetMessageAsync(channelId, messageId)).DeleteAsync();
@@ -136,7 +141,7 @@ namespace DiscordBot
 				var message = await channel.GetMessageAsync(messageId);
 				return message != null;
 			}
-			catch (Exception e)
+			catch
 			{
 				return false;
 			}

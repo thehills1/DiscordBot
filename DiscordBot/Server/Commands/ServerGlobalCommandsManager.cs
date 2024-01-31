@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
-using Chloe.Threading.Tasks;
 using DiscordBot.Configs;
 using DiscordBot.Database.Enums;
 using DiscordBot.Database.Tables;
@@ -23,19 +22,22 @@ namespace DiscordBot.Server.Commands
 		private readonly ServerDatabaseManager _databaseManager;
 		private readonly SalaryConfig _salaryConfig;
 		private readonly ServerConfig _serverConfig;
+		private readonly StaffInfoMessagesConfig _infoMessagesConfig;
 
 		public ServerGlobalCommandsManager(
 			Bot bot,
 			ServerContext serverContext,
 			ServerDatabaseManager databaseManager,
 			SalaryConfig salaryConfig,
-			ServerConfig serverConfig)
+			ServerConfig serverConfig,
+			StaffInfoMessagesConfig infoMessagesConfig)
 		{
 			_bot = bot;
 			_serverContext = serverContext;
 			_databaseManager = databaseManager;
 			_salaryConfig = salaryConfig;
 			_serverConfig = serverConfig;
+			_infoMessagesConfig = infoMessagesConfig;
 		}
 
 		public CommandResult TryAddModeratorTable(
@@ -164,15 +166,9 @@ namespace DiscordBot.Server.Commands
 			var fileName = Path.Combine(_serverContext.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".")}.xlsx");
 			var messageContent = "Актуальный список модераторов:";
 
-			// TODO - remove message through db table
-			var lastMessages = await channel.GetMessagesAsync();
-			foreach (var discordMessage in lastMessages)
+			if (_infoMessagesConfig.SentMessageIds?.TryGetValue(channel.Id, out var messageId) ?? false)
 			{
-				if (discordMessage.Content.Contains(messageContent))
-				{
-					await discordMessage.DeleteAsync();
-					break;
-				}
+				await _bot.DeleteMessageAsync(channel, messageId);
 			}
 
 			if (!ExcelWorksheetCreator.TryGenerateAndSaveFile(tables, fileName))
@@ -188,6 +184,10 @@ namespace DiscordBot.Server.Commands
 					.SendAsync(channel);
 
 				if (pinMessage) await sentMessage.PinAsync();
+
+				_infoMessagesConfig.SentMessageIds ??= new Dictionary<ulong, ulong>();
+				_infoMessagesConfig.SentMessageIds.Add(channel.Id, sentMessage.Id);
+				_infoMessagesConfig.Save();
 			}
 
 			return new CommandResult(true, $"Лист с таблицами был успешно отправлен в канал {channel.Mention}.");

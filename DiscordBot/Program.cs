@@ -79,6 +79,12 @@ namespace DiscordBot
 				var serverContext = container.GetService<ServerContext>();
 				return RulesConfig.LoadOrCreate(Path.Combine(serverContext.RootServerPath, "rules_config.json"));
 			});
+
+			serviceCollection.AddScoped(container =>
+			{
+				var serverContext = container.GetService<ServerContext>();
+				return StaffInfoMessagesConfig.LoadOrCreate(Path.Combine(serverContext.RootServerPath, "staff_info_messages_config.json"));
+			});
 		}
 
 		private static void InitializeBotEnvironmentDirectories()
