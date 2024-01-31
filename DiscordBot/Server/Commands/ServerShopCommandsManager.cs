@@ -10,41 +10,36 @@ namespace DiscordBot.Server.Commands
 {
 	public class ServerShopCommandsManager
 	{
-		private readonly MessageManager _messageManager;
+		private readonly Bot _bot;
 		private readonly ServerDatabaseManager _databaseManager;
 		private readonly ShopsConfig _shopsConfig;
 
-		public ServerShopCommandsManager(MessageManager messageManager, ServerDatabaseManager databaseManager, ShopsConfig shopsConfig)
+		public ServerShopCommandsManager(Bot bot, ServerDatabaseManager databaseManager, ShopsConfig shopsConfig)
 		{
-			_messageManager = messageManager;
+			_bot = bot;
 			_databaseManager = databaseManager;
 			_shopsConfig = shopsConfig;
 		}
 
-		public bool TryAddShop(
+		public async Task<CommandResult> TryAddShopAsync(
 			ulong ownerId, 
 			ServerName serverName, 
 			string name, 
 			string paidUntil,
 			ulong firstDeputyId,
 			ulong secondDeputyId,
-			out string message, 
 			string imageUrl = null)
 		{
-			message = "";
-
-			var tables = _databaseManager.GetMultyDataDB<ShopTable>(table => table.ServerName == serverName).Result;
+			var tables = await _databaseManager.GetMultyDataDBAsync<ShopTable>(table => table.ServerName == serverName);
 			if (tables.Count >= _shopsConfig.MaxShopsPerServer)
 			{
-				message = $"На данном сервере уже есть **{_shopsConfig.MaxShopsPerServer}** магазинов.";
-				return false;
+				return new CommandResult(false, $"На данном сервере уже есть **{_shopsConfig.MaxShopsPerServer}** магазинов.");
 			}
 
-			if (IsShopExists(name, out message, out _)) return false;
+			if (IsShopExists(name, out var message, out _)) return new CommandResult(false, message);
 			if (!DateTime.TryParse(paidUntil, out var paidUntilTime))
 			{
-				message = "Указан неверный формат даты - указывайте **ДД.ММ.ГГ.**";
-				return false;
+				return new CommandResult(false, "Указан неверный формат даты - указывайте **ДД.ММ.ГГ.**");
 			}
 
 			var shopTable = new ShopTable()
@@ -60,28 +55,18 @@ namespace DiscordBot.Server.Commands
 
 			_databaseManager.AddTableDB(shopTable);
 
-			TryUpdateList(shopTable.ServerName, out _);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			message = $"Магазин **{name}** успешно добавлен с список магазинов сервера **{serverName}.**";
-			return true;
+			return new CommandResult(true, $"Магазин **{name}** успешно добавлен с список магазинов сервера **{serverName}.**");
 		}
 
-		public bool TryAddDeputy(string name, ulong deputyId, out string message)
+		public async Task<CommandResult> TryAddDeputyAsync(string name, ulong deputyId)
 		{
-			message = "";
-
-			if (!IsShopExists(name, out message, out var shopTable)) return false;
-
-			if (shopTable.OwnerId == deputyId)
-			{
-				message = "Владельца магазина нельзя сделать его заместителем.";
-				return false;
-			}
-
+			if (!IsShopExists(name, out var message, out var shopTable)) return new CommandResult(false, message);
+			if (shopTable.OwnerId == deputyId) return new CommandResult(false, "Владельца магазина нельзя сделать его заместителем.");
 			if (shopTable.FirstDeputyId != 0 && shopTable.SecondDeputyId != 0)
 			{
-				message = "В магазине уже есть максимальное количество заместителей.";
-				return false;
+				return new CommandResult(false, "В магазине уже есть максимальное количество заместителей.");
 			}
 
 			if (shopTable.FirstDeputyId == 0)
@@ -95,54 +80,40 @@ namespace DiscordBot.Server.Commands
 
 			_databaseManager.AddOrUpdateTableDB(shopTable);
 
-			TryUpdateList(shopTable.ServerName, out _);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			message = $"Заместитель {deputyId.GetMention(MentionType.Username)} успешно добавлен в магазин **{name}.**";
-			return true;
+			return new CommandResult(true, $"Заместитель {deputyId.GetMention(MentionType.Username)} успешно добавлен в магазин **{name}.**");
 		}
 
-		public bool TryChangeName(string name, string newName, out string message)
+		public async Task<CommandResult> TryChangeNameAsync(string name, string newName)
 		{
-			message = "";
+			if (!IsShopExists(name, out var message, out var shopTable)) return new CommandResult(false, message);
 
-			if (!IsShopExists(name, out message, out var shopTable)) return false;
-
-			_databaseManager.RemoveTable(shopTable);
+			_databaseManager.RemoveTableAsync(shopTable);
 
 			shopTable.Name = newName;
 			_databaseManager.AddTableDB(shopTable);
 
-			TryUpdateList(shopTable.ServerName, out _);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			message = $"Название магазина успешно обновлено с **{name}** на **{newName}.**";
-			return true;
+			return new CommandResult(true, $"Название магазина успешно обновлено с **{name}** на **{newName}.**");
 		}
 
-		public bool TryDelete(string name, out string message)
+		public async Task<CommandResult> TryDeleteShopAsync(string name)
 		{
-			message = "";
+			if (!IsShopExists(name, out var message, out var shopTable)) return new CommandResult(false, message);
 
-			if (!IsShopExists(name, out message, out var shopTable)) return false;
+			await _databaseManager.RemoveTableAsync(shopTable);
 
-			_databaseManager.RemoveTable(shopTable);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			TryUpdateList(shopTable.ServerName, out _);
-
-			message = $"Магазин **{name}** успешно удалён.";
-			return true;
+			return new CommandResult(true, $"Магазин **{name}** успешно удалён.");
 		}
 
-		public bool TryExtend(string name, TimeCmd time, int count, out string message)
+		public async Task<CommandResult> TryExtendShopAsync(string name, TimeCmd time, int count)
 		{
-			message = "";
-
-			if (count <= 0)
-			{
-				message = "Количество времени не может быть меньше или равно нулю.";
-				return false;
-			}
-
-			if (!IsShopExists(name, out message, out var shopTable)) return false;
+			if (count <= 0) return new CommandResult(false, "Количество времени не может быть меньше или равно нулю.");
+			if (!IsShopExists(name, out var message, out var shopTable)) return new CommandResult(false, message);
 
 			var actualPaidTime = shopTable.PaidUntil;
 			actualPaidTime = time switch
@@ -157,21 +128,17 @@ namespace DiscordBot.Server.Commands
 
 			_databaseManager.AddOrUpdateTableDB(shopTable);
 
-			TryUpdateList(shopTable.ServerName, out _);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			message = $"Магазин **{name}** успешно продлен на **{count} {time}.**";
-			return true;
+			return new CommandResult(true, $"Магазин **{name}** успешно продлен на **{count} {time}.**");
 		}
 
-		public bool TryRemoveDeputy(string name, ulong deputyId, out string message)
+		public async Task<CommandResult> TryRemoveDeputyAsync(string name, ulong deputyId)
 		{
-			message = "";
-
-			if (!IsShopExists(name, out message, out var shopTable)) return false;
+			if (!IsShopExists(name, out var message, out var shopTable)) return new CommandResult(false, message);
 			if (!(shopTable.FirstDeputyId == deputyId || shopTable.SecondDeputyId == deputyId))
 			{
-				message = $"Пользователя {deputyId.GetMention(MentionType.Username)} нет в списке заместителей данного магазина.";
-				return false;
+				return new CommandResult(false, $"Пользователя {deputyId.GetMention(MentionType.Username)} нет в списке заместителей данного магазина.");
 			}
 
 			if (shopTable.FirstDeputyId == deputyId)
@@ -185,37 +152,31 @@ namespace DiscordBot.Server.Commands
 
 			_databaseManager.AddOrUpdateTableDB(shopTable);
 
-			TryUpdateList(shopTable.ServerName, out _);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			message = $"Пользователь {deputyId.GetMention(MentionType.Username)} удален из списка заместителей магазина **{name}.**";
-			return true;
+			return new CommandResult(true, $"Пользователь {deputyId.GetMention(MentionType.Username)} удален из списка заместителей магазина **{name}.**");
 		}
 
-		public bool TryUpdateImage(string name, string imageUrl, out string message)
+		public async Task<CommandResult> TryUpdateImageAsync(string name, string imageUrl)
 		{
-			message = "";
-
-			if (!IsShopExists(name, out message, out var shopTable)) return false;
+			if (!IsShopExists(name, out var message, out var shopTable)) return new CommandResult(false, message);
 
 			shopTable.ImageUrl = imageUrl;
 
 			_databaseManager.AddOrUpdateTableDB(shopTable);
 
-			TryUpdateList(shopTable.ServerName, out _);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			message = "Ссылка на изображение успешно обновлена.";
-			return true;
+			return new CommandResult(true, "Ссылка на изображение успешно обновлена.");
 		}
 
 		private readonly object _updateSync = new object();
 
-		public bool TryUpdateList(ServerName serverName, out string message)
+		public async Task<CommandResult> TryUpdateListAsync(ServerName serverName)
 		{
-			message = "";
-
 			var content = "**Актуальный список магазинов:**";
 			var embeds = new List<DiscordEmbed>();
-			var tables = _databaseManager.GetMultyDataDB<ShopTable>(table => table.ServerName == serverName).Result;
+			var tables = await _databaseManager.GetMultyDataDBAsync<ShopTable>(table => table.ServerName == serverName);
 			foreach (var table in tables)
 			{
 				embeds.Add(GenerateShopInfo(table));
@@ -224,9 +185,9 @@ namespace DiscordBot.Server.Commands
 			lock (_updateSync)
 			{
 				var messageTable = _databaseManager.GetTableDB<ShopListMessageTable>(table => table.ServerName == serverName).Result;
-				if (messageTable == null)
+				if (messageTable == null || !_bot.MessageExistsAsync(_shopsConfig.InfoChannels[serverName], messageTable?.MessageId ?? 0).Result)
 				{
-					var sentMessage = _messageManager.SendMessageAsync(_shopsConfig.InfoChannels[serverName], content, embeds).Result;
+					var sentMessage = _bot.SendMessageAsync(_shopsConfig.InfoChannels[serverName], content, embeds).Result;
 
 					messageTable = new ShopListMessageTable()
 					{
@@ -238,27 +199,19 @@ namespace DiscordBot.Server.Commands
 				}
 				else
 				{
-					_messageManager.EditMessageAsync(_shopsConfig.InfoChannels[serverName], messageTable.MessageId, content, embeds);
+					_bot.EditMessageAsync(_shopsConfig.InfoChannels[serverName], messageTable.MessageId, content, embeds).Wait();
 				}
 			}	
 
-			message = "Успешно отправлено.";
-			return true;
+			return new CommandResult(true, "Успешно отправлено.");
 		}
 
-		public bool TrySetOwner(string name, ulong newOwnerId, out string message)
+		public async Task<CommandResult> TrySetOwnerAsync(string name, ulong newOwnerId)
 		{
-			message = "";
+			if (!IsShopExists(name, out var message, out var shopTable)) return new CommandResult(false, message);
+			if (shopTable.OwnerId == newOwnerId) return new CommandResult(false, "Данный пользователь итак является владельцем данного магазина.");
 
-			if (!IsShopExists(name, out message, out var shopTable)) return false;
-
-			if (shopTable.OwnerId == newOwnerId)
-			{
-				message = "Данный пользователь итак является владельцем данного магазина.";
-				return false;
-			}
-
-			_databaseManager.RemoveTable(shopTable);
+			await _databaseManager.RemoveTableAsync(shopTable);
 			
 			shopTable.OwnerId = newOwnerId;
 
@@ -267,10 +220,9 @@ namespace DiscordBot.Server.Commands
 
 			_databaseManager.AddOrUpdateTableDB(shopTable);
 
-			TryUpdateList(shopTable.ServerName, out _);
+			await TryUpdateListAsync(shopTable.ServerName);
 
-			message = $"Владелец магазина **{name}** успешно обновлен на {newOwnerId.GetMention(MentionType.Username)}.";
-			return true;
+			return new CommandResult(true, $"Владелец магазина **{name}** успешно обновлен на {newOwnerId.GetMention(MentionType.Username)}.");
 		}
 
 		private DiscordEmbedBuilder GenerateShopInfo(ShopTable shopTable)

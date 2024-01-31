@@ -19,16 +19,16 @@ namespace DiscordBot.Commands
 		[SlashCommand("addmod", "Постановить участника на пост модератора.", false)]
 		public async Task AddModerator(
 			InteractionContext context,
-			[Option("User", "Пользователь")] DiscordUser user,
-			[Option("Permission", "Уровень доступа")] PermissionLevel permissionLevel,
-			[Option("Reprimands", "Выговоры")] long reprimands,
-			[Option("Nickname", "Ник в игре")] string nickname,
-			[Option("SID", "SID")] string sid,
-			[Option("Server", "Название сервера")] ServerName serverName,
-			[Option("Bank", "Номер банковского счёта")] 
+			[Option(nameof(user), "Пользователь")] DiscordUser user,
+			[Option(nameof(permissionLevel), "Уровень доступа")] PermissionLevel permissionLevel,
+			[Option(nameof(reprimands), "Выговоры")] long reprimands,
+			[Option(nameof(nickname), "Ник в игре")] string nickname,
+			[Option(nameof(sid), "SID")] string sid,
+			[Option(nameof(serverName), "Название сервера")] ServerName serverName,
+			[Option(nameof(bankNumber), "Номер банковского счёта")] 
 			[MinimumLength(8)] 
 			[MaximumLength(8)] string bankNumber,
-			[Option("Forum", "Ссылка на форумный аккаунт")] string forumLink)
+			[Option(nameof(forumLink), "Ссылка на форумный аккаунт")] string forumLink)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.AddModerator(context, user, permissionLevel, reprimands, nickname, sid, serverName, bankNumber, forumLink);
@@ -37,10 +37,10 @@ namespace DiscordBot.Commands
 		[SlashCommand("makemod", "Измененить уровень доступа модератора.", false)]
 		public async Task SetModeratorPermissionLevel(
 			InteractionContext context,
-			[Option("User", "Пользователь")] DiscordUser user,
-			[Option("Permission", "Уровень доступа")] PermissionLevel permissionLevel,
-			[Option("Reason", "Причина снятия")] string dismissionReason = null,
-			[Option("Reinstatement", "Восстановление")] 
+			[Option(nameof(user), "Пользователь")] DiscordUser user,
+			[Option(nameof(permissionLevel), "Уровень доступа")] PermissionLevel permissionLevel,
+			[Option(nameof(dismissionReason ), "Причина снятия")] string dismissionReason = null,
+			[Option(nameof(reinstatement), "Восстановление")] 
 			[Choice("Да", "да")] 
 			[Choice("Нет", "нет")] string reinstatement = null)
 		{
@@ -49,7 +49,8 @@ namespace DiscordBot.Commands
 		}
 
 		[SlashCommand("mwarn", "Выдать предупреждение модератору.", false)]
-		public async Task WarnModerator(InteractionContext context, [Option("user", "Пользователь")] DiscordUser user)
+		public async Task WarnModerator(InteractionContext context, 
+			[Option(nameof(user), "Пользователь")] DiscordUser user)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.WarnModerator(context, user);
@@ -58,9 +59,9 @@ namespace DiscordBot.Commands
 		[SlashCommand("editinfo", "Изменить информацию о модераторе.", false)]
 		public async Task EditModeratorInfo(
 			InteractionContext context, 
-			[Option("User", "Пользователь")] DiscordUser user,
-			[Option("Property", "Изменяемые данные")] [Autocomplete(typeof(TablePropertyAutocompleteProvider<ModeratorTable>))] string property,
-			[Option("Value", "Новое значение")] [Autocomplete(typeof(TablePropertyValueAutocompleteProvider<ModeratorTable>))] string value)
+			[Option(nameof(user), "Пользователь")] DiscordUser user,
+			[Option(nameof(property), "Изменяемые данные")] [Autocomplete(typeof(TablePropertyAutocompleteProvider<ModeratorTable>))] string property,
+			[Option(nameof(value), "Новое значение")] [Autocomplete(typeof(TablePropertyValueAutocompleteProvider<ModeratorTable>))] string value)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.EditModeratorInfo(context, user, property, value);
@@ -69,8 +70,8 @@ namespace DiscordBot.Commands
 		[SlashCommand("sendstaffinfo", "Отправить лист excel с данными о составе модераторов.", false)]
 		public async Task SendStaffInfo(
 			InteractionContext context,
-			[Option("Channel", "Канал для отправки")] DiscordChannel channel,
-			[Option("AllTables", "Отправить все дополнительные таблицы")] bool allTables)
+			[Option(nameof(channel), "Канал для отправки")] DiscordChannel channel,
+			[Option(nameof(allTables), "Отправить все дополнительные таблицы")] bool allTables)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.SendStaffInfo(context, channel, allTables);
@@ -79,7 +80,7 @@ namespace DiscordBot.Commands
 		[SlashCommand("sendsalary", "Отправляет таблицу с зарплатой за прошедшие 2 недели.", false)]
 		public async Task SendExcelSalaryWorksheet(
 			InteractionContext context,
-			[Option("Weeks", "Количество недель, зарплату для которых надо просчитать")] long weeks = 2)
+			[Option(nameof(weeks), "Количество недель, зарплату для которых надо просчитать")] long weeks = 2)
 		
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
@@ -89,14 +90,15 @@ namespace DiscordBot.Commands
 		[SlashCommand("salaryinfo", "Вывод информацию о полученной зарплате за всё время.", false)]
 		public async Task GetModeratorSalaryInfo(
 			InteractionContext context,
-			[Option("User", "Пользователь")] DiscordUser user = null)
+			[Option(nameof(user), "Пользователь")] DiscordUser user = null)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.GetModeratorSalaryInfo(context, user);
 		}
 
 		[SlashCommand("setnorm", "Изменить норму наказаний в неделю.", false)]
-		public async Task SetNorm(InteractionContext context, [Option("Count", "Количество действий за неделю")] long count)
+		public async Task SetNorm(InteractionContext context, 
+			[Option(nameof(count), "Количество действий за неделю")] long count)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
 				.SetNorm(context, count);

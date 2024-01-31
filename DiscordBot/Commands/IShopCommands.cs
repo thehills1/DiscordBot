@@ -1,5 +1,6 @@
 ﻿using DiscordBot.Commands.AutocompleteProviders;
 using DiscordBot.Database.Enums;
+using DiscordBot.Server.Commands;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 
@@ -17,9 +18,9 @@ namespace DiscordBot.Commands
 			DiscordUser secondDeputy = null, 
 			string imageUrl = null);
 
-		Task Delete(InteractionContext context, string name);
+		Task DeleteShop(InteractionContext context, string name);
 
-		Task Extend(InteractionContext context, string name, TimeCmd time, long count);
+		Task ExtendShop(InteractionContext context, string name, TimeCmd time, long count);
 
 		Task ChangeName(InteractionContext context, string name, string newName);
 

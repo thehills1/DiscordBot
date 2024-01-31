@@ -47,7 +47,7 @@ namespace DiscordBot.Database
 			TableAdded?.Invoke(this, new TableAddedEventArgs(table));
 		}
 
-		public async Task RemoveTable<T>(T table) where T : ITable
+		public async Task RemoveTableAsync<T>(T table) where T : ITable
 		{
 			await _databaseContext.DeleteAsync(table);
 
@@ -59,7 +59,7 @@ namespace DiscordBot.Database
 			return await _databaseContext.Query<T>().ToListAsync();
 		}
 
-		public async Task<List<T>> GetMultyDataDB<T>(Expression<Func<T, bool>> selector) where T : ITable
+		public async Task<List<T>> GetMultyDataDBAsync<T>(Expression<Func<T, bool>> selector) where T : ITable
 		{
 			return await _databaseContext.Query<T>().Where(selector).ToListAsync();
 		}

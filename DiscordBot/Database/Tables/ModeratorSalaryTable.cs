@@ -1,5 +1,6 @@
 ﻿using Chloe.Annotations;
 using DiscordBot.Database.Enums;
+using DiscordBot.Extensions;
 using DiscordBot.Extensions.Excel;
 
 namespace DiscordBot.Database.Tables
@@ -20,6 +21,9 @@ namespace DiscordBot.Database.Tables
 		[ExcelColumn("Сервер")]
 		public ServerName ServerName { get; set; }
 
+		[ExcelColumn("Ник в игре")]
+		public string Nickname { get; set; }
+
 		[ExcelColumn("Номер счёта")]
 		public string BankNumber { get; set; }
 
@@ -39,6 +43,7 @@ namespace DiscordBot.Database.Tables
 			{
 				nameof(User),
 				nameof(ServerName),
+				nameof(Nickname),
 				nameof(BankNumber),
 				nameof(ActionsCount),
 				nameof(Salary),

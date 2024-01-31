@@ -7,9 +7,9 @@ namespace DiscordBot.Database
 	{
 		void Initialize();
 		void AddOrUpdateTableDB<T>(T table) where T : ITable;
-		Task RemoveTable<T>(T table) where T : ITable;
+		Task RemoveTableAsync<T>(T table) where T : ITable;
 		Task<List<T>> GetMultyDataDB<T>() where T : ITable;
-		Task<List<T>> GetMultyDataDB<T>(Expression<Func<T, bool>> selector) where T : ITable;
+		Task<List<T>> GetMultyDataDBAsync<T>(Expression<Func<T, bool>> selector) where T : ITable;
 		Task<List<T>> GetMultyDataDBAsc<T, TOrder>(Expression<Func<T, TOrder>> orderSelector) where T : ITable;
 		Task<List<T>> GetMultyDataDBDesc<T, TOrder>(Expression<Func<T, TOrder>> orderSelector) where T : ITable;
 		Task<List<T>> GetMultyDataDBAsc<T, TOrder>(Expression<Func<T, bool>> selector, Expression<Func<T, TOrder>> orderSelector) where T : ITable;

@@ -7,7 +7,7 @@ namespace DiscordBot.Extensions.Excel
 {
 	public static class ExcelWorksheetCreator
 	{
-		public static void GenerateAndSaveFile(List<ITableCollection> insertTables, string fileName)
+		public static bool TryGenerateAndSaveFile(List<ITableCollection> insertTables, string fileName)
 		{
 			try
 			{
@@ -32,10 +32,13 @@ namespace DiscordBot.Extensions.Excel
 				}
 
 				package.SaveAs(new FileInfo(fileName));
+
+				return true;
 			}
 			catch (Exception ex)
 			{
 				Console.WriteLine(ex);
+				return false;
 			}
 		}
 

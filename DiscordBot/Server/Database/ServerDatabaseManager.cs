@@ -11,7 +11,7 @@ namespace DiscordBot.Server.Database
 
 		public async Task RemoveTable<T>(ulong id) where T : BaseTable
 		{
-			RemoveTable(await GetTable<T>(id));
+			RemoveTableAsync(await GetTable<T>(id));
 		}
 
 		public async Task<T> GetTable<T>(ulong id) where T : BaseTable

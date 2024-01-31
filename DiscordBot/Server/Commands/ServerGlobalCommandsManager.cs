@@ -38,7 +38,7 @@ namespace DiscordBot.Server.Commands
 			_serverConfig = serverConfig;
 		}
 
-		public bool TryAddModeratorTable(
+		public CommandResult TryAddModeratorTable(
 			DiscordUser user,
 			PermissionLevel permissionLevel,
             DateTime desicionDate,
@@ -47,15 +47,12 @@ namespace DiscordBot.Server.Commands
             string sid,
 			ServerName serverName,
             string bankNumber,
-            string forumLink,
-            out string message)
+            string forumLink)
         {
-            message = "";
-
-            if (CheckModeratorTableExists(user.Id, out _, out message)) return false;
-            if (CheckNickname(nickname, out message)) return false;
-            if (CheckSid(sid, out message)) return false;
-            if (CheckForumLink(forumLink, out message)) return false;
+            if (CheckModeratorTableExists(user.Id, out _, out var message)) return new CommandResult(false, message);
+            if (CheckNickname(nickname, out message)) return new CommandResult(false, message);
+            if (CheckSid(sid, out message)) return new CommandResult(false, message);
+            if (CheckForumLink(forumLink, out message)) return new CommandResult(false, message);
 
             var table = new ModeratorTable
             {
@@ -74,58 +71,40 @@ namespace DiscordBot.Server.Commands
 
 			_databaseManager.AddOrUpdateTableDB(table);
 
-            message = $"Добавил {user.Mention} в список модераторов.";
-            return true;
+            return new CommandResult(true, $"Добавил {user.Mention} в список модераторов.");
         }
 
-		public bool TrySetModeratorPermissionLevel(
+		public async Task<CommandResult> TrySetModeratorPermissionLevelAsync(
 			DiscordUser user, 
 			PermissionLevel permissionLevel,
-			out string message,
 			string dismissionReason = null,
 			string reinstatement = null)
 		{
-			message = "";
-
-			if (CheckModeratorTableNotExists(user.Id, out var table, out message)) return false;
-
-			if (table.PermissionLevel == permissionLevel)
-			{
-				message = "У модератора уже установлен данный уровень доступа.";
-				return false;
-			}
+			if (CheckModeratorTableNotExists(user.Id, out var table, out var message)) return new CommandResult(false, message);
+			if (table.PermissionLevel == permissionLevel) return new CommandResult(false, "У модератора уже установлен данный уровень доступа.");
 			
 			if (permissionLevel == PermissionLevel.None)
 			{
-				if (dismissionReason == null)
-				{
-					message = "Вы не указали причину снятия.";
-					return false;
-				}
+				if (dismissionReason == null) return new CommandResult(false, "Вы не указали причину снятия.");
 
 				reinstatement ??= table.Reprimands == 0 ? "да" : "нет";
 
-				RemoveModeratorTable(table, dismissionReason, reinstatement, out message);
-				return true;
+				return await RemoveModeratorTable(table, dismissionReason, reinstatement);
 			}
 
 			table.PermissionLevel = permissionLevel;
 			_databaseManager.AddOrUpdateTableDB(table);
 
-			message = $"Вы изменили уровень модератора {user.Mention} на **{permissionLevel}.**";
-			return true;
+			return new CommandResult(true, $"Вы изменили уровень модератора {user.Mention} на **{permissionLevel}.**");
 		}
 
-		public bool TryWarnModerator(DiscordUser user, out string message)
+		public async Task<CommandResult> TryWarnModeratorAsync(DiscordUser user)
 		{
-			message = "";
-
-			if (CheckModeratorTableNotExists(user.Id, out var table, out message)) return false;
+			if (CheckModeratorTableNotExists(user.Id, out var table, out var message)) return new CommandResult(false, message);
 
 			if (table.Reprimands == ModeratorTable.ReprimandsLimit - 1)
 			{
-				RemoveModeratorTable(table, $"{ModeratorTable.ReprimandsLimit}/{ModeratorTable.ReprimandsLimit}", "нет", out message);
-				return true;
+				return await RemoveModeratorTable(table, $"{ModeratorTable.ReprimandsLimit}/{ModeratorTable.ReprimandsLimit}", "нет");
 			}
 
 			table.Reprimands++;
@@ -133,31 +112,29 @@ namespace DiscordBot.Server.Commands
 
 			message = $"Вы выдали модератору {user.Mention} предупреждение. " +
 				$"\nТекущее количество предупреждений модератора: **{table.Reprimands}/{ModeratorTable.ReprimandsLimit}.**";
-			return true;
+			return new CommandResult(true, message);
 		}
 
-		public bool TryEditModeratorInfo(DiscordUser user, string property, string value, out string message)
+		public CommandResult TryEditModeratorInfo(DiscordUser user, string property, string value)
 		{
-			message = "";
-
-			if (CheckModeratorTableNotExists(user.Id, out var table, out message)) return false;
+			if (CheckModeratorTableNotExists(user.Id, out var table, out var message)) return new CommandResult(false, message);
 
 			switch (property)
 			{
 				case nameof(ModeratorTable.Sid):
-					if (!TryEditSid(table, value, out message)) return false;			
+					if (!TryEditSid(table, value, out message)) return new CommandResult(false, message);			
 					break;
 				case nameof(ModeratorTable.BankNumber):
-					if (!TryEditBankNumber(table, value, out message)) return false;
+					if (!TryEditBankNumber(table, value, out message)) return new CommandResult(false, message);
 					break;
 				case nameof(ModeratorTable.Nickname):
-					if (!TryEditNickname(table, value, out message)) return false;					
+					if (!TryEditNickname(table, value, out message)) return new CommandResult(false, message);					
 					break;
 				case nameof(ModeratorTable.ServerName):
-					if (!TryEditServerName(table, value, out message)) return false;
+					if (!TryEditServerName(table, value, out message)) return new CommandResult(false, message);
 					break;
 				case nameof(ModeratorTable.ForumLink):
-					if (!TryEditForumLink(table, value, out message)) return false;				
+					if (!TryEditForumLink(table, value, out message)) return new CommandResult(false, message);				
 					break;
 			}
 
@@ -166,64 +143,60 @@ namespace DiscordBot.Server.Commands
 			message = $"Вы изменили данные модератора {user.Mention}. " +
 				$"\nБыли изменены данные: **{property}.** " +
 				$"\nНовое значение: **{value}.**";
-			return true;
+			return new CommandResult(true, message);
 		}
 
-		public bool TrySendExcelStaffWorksheet(DiscordChannel channel, bool allTables, out string message, bool pinMessage = false)
+		public async Task<CommandResult> TrySendExcelStaffWorksheetAsync(DiscordChannel channel, bool allTables, bool pinMessage = false)
 		{
-			message = "";
-
 			var tables = new List<ITableCollection>();
 
-			var modTables = _databaseManager.GetMultyDataDBDesc<ModeratorTable, PermissionLevel>(table => table.PermissionLevel).Result;
+			var modTables = await _databaseManager.GetMultyDataDBDesc<ModeratorTable, PermissionLevel>(table => table.PermissionLevel);
 			tables.Add(new TableCollection<ModeratorTable>(modTables));
 
-			UpdateActualUsernames(modTables);
+			await UpdateActualUsernames(modTables);
 
 			if (allTables)
 			{
-				var dismissedModTables = _databaseManager.GetMultyDataDB<DismissedModeratorTable>().Result.OrderBy(table => table.DismissionDate).ToList();
+				var dismissedModTables = (await _databaseManager.GetMultyDataDB<DismissedModeratorTable>()).OrderBy(table => table.DismissionDate).ToList();
 				tables.Add(new TableCollection<DismissedModeratorTable>(dismissedModTables));
 			}
 
 			var fileName = Path.Combine(_serverContext.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".")}.xlsx");
 			var messageContent = "Актуальный список модераторов:";
 
-			var lastMessages = channel.GetMessagesAsync().Result;
+			// TODO - remove message through db table
+			var lastMessages = await channel.GetMessagesAsync();
 			foreach (var discordMessage in lastMessages)
 			{
 				if (discordMessage.Content.Contains(messageContent))
 				{
-					discordMessage.DeleteAsync().GetResult();
+					await discordMessage.DeleteAsync();
 					break;
 				}
 			}
 
-			ExcelWorksheetCreator.GenerateAndSaveFile(tables, fileName);
-
-			if (!File.Exists(fileName)) return false;
-
+			if (!ExcelWorksheetCreator.TryGenerateAndSaveFile(tables, fileName))
+			{
+				return new CommandResult(false, "Произошла ошибка при создании файла с excel таблицей. Возможно, она была пуста.");
+			}
+			
 			using (var fileStream = new FileStream(fileName, FileMode.Open))
 			{
-				var sentMessage = new DiscordMessageBuilder()
+				var sentMessage = await new DiscordMessageBuilder()
 					.WithContent(messageContent)
 					.AddFile(fileStream)
-					.SendAsync(channel)
-					.Result;
+					.SendAsync(channel);
 
-				if (pinMessage) sentMessage.PinAsync().GetResult();
+				if (pinMessage) await sentMessage.PinAsync();
 			}
 
-			message = $"Лист с таблицами был успешно отправлен в канал {channel.Mention}.";
-			return true;
+			return new CommandResult(true, $"Лист с таблицами был успешно отправлен в канал {channel.Mention}.");
 		}
 
-		public bool TrySendExcelSalaryWorksheet(out string message, int weeks = 2)
+		public async Task<CommandResult> TrySendExcelSalaryWorksheetAsync(int weeks = 2)
 		{
-			message = "";
-
-			var channelToDownload = _bot.GetChannelAsync(_serverConfig.BotStatsChannelId).Result;
-			var channelToSend = _bot.GetChannelAsync(_serverConfig.StatsChannelId).Result;
+			var channelToDownload = await _bot.GetChannelAsync(_serverConfig.BotStatsChannelId);
+			var channelToSend = await _bot.GetChannelAsync(_serverConfig.StatsChannelId);
 
 			var moderatorsActions = GetModeratorsActions(
 					channelToDownload, 
@@ -237,36 +210,28 @@ namespace DiscordBot.Server.Commands
 			var datesString = $"{periodStartDate.ToShortDateString()} - {periodEndDate.ToShortDateString()}";
 
 			var fileName = Path.Combine(_serverContext.SalaryWorksheetsPath, $"salary {datesString}.xlsx");
-			ExcelWorksheetCreator.GenerateAndSaveFile(new() { salaryTables }, fileName);
+
+			if (!ExcelWorksheetCreator.TryGenerateAndSaveFile(new() { salaryTables }, fileName))
+			{
+				return new CommandResult(false, "Произошла ошибка при создании файла с excel таблицей. Возможно, она была пуста.");
+			}
 
 			using (var fileStream = new FileStream(fileName, FileMode.Open))
 			{
-				_ = new DiscordMessageBuilder()
-					.WithContent($"Зарплата за {datesString}.")
-					.AddFile(fileStream)
-					.SendAsync(channelToSend)
-					.Result;
+				await new DiscordMessageBuilder().WithContent($"Зарплата за {datesString}.").AddFile(fileStream).SendAsync(channelToSend);
 			}
 
-			message = $"Лист с зарплатой был успешно отправлен в канал {channelToSend.Mention}.";
-			return true;
+			return new CommandResult(true, $"Лист с зарплатой был успешно отправлен в канал {channelToSend.Mention}.");
 		}
 
-		public bool TrySetNorm(int count, out string message)
+		public CommandResult TrySetNorm(int count)
 		{
-			message = "";
-
-			if (count < 0)
-			{
-				message = "Количество действий не может быть меньше нуля.";
-				return false;
-			}
+			if (count < 0) return new CommandResult(false, "Количество действий не может быть меньше нуля.");
 
 			_salaryConfig.ActionsPerWeekToSalary = count;
 			_salaryConfig.Save();
 
-			message = $"Норма наказаний успешно изменена на **{count}** в неделю.";
-			return true;
+			return new CommandResult(true, $"Норма наказаний успешно изменена на **{count}** в неделю.");
 		}
 
 		private Dictionary<ulong, int> GetModeratorsActions(
@@ -328,7 +293,6 @@ namespace DiscordBot.Server.Commands
 
 				sortedActions[table.ServerName].Add(table, moderatorAction.Value);
 
-
 				if (table.PermissionLevel <= PermissionLevel.Curator 
 					&& moderatorAction.Value >= _salaryConfig.ActionsPerWeekToSalary * weeks)
 				{
@@ -368,6 +332,7 @@ namespace DiscordBot.Server.Commands
 						Id = moderatorTable.Id,
 						User = moderatorTable.User,
 						ServerName = moderatorTable.ServerName,
+						Nickname = moderatorTable.Nickname,
 						BankNumber = moderatorTable.BankNumber,
 						ActionsCount = moderatorActions.Value,
 						Salary = salary,
@@ -385,11 +350,11 @@ namespace DiscordBot.Server.Commands
 			return new TableCollection<ModeratorSalaryTable>(output);
 		}
 
-		private void UpdateActualUsernames(List<ModeratorTable> tables)
+		private async Task UpdateActualUsernames(List<ModeratorTable> tables)
 		{
 			foreach (ModeratorTable table in tables)
 			{
-				var user = _bot.GetUserAsync(table.Id).Result;
+				var user = await _bot.GetUserAsync(table.Id);
 				var actualUsername = user.GetUser();
 				if (table.User == actualUsername) continue;
 
@@ -424,34 +389,37 @@ namespace DiscordBot.Server.Commands
 			return (int) Math.Floor((double) raw / 1000) * 1000;
         }
 
-		public bool TryGetModeratorSalaryInfo(ulong id, bool author, out string message)
+		public async Task<CommandResult> TryGetModeratorSalaryInfoAsync(ulong id, bool author)
 		{
-			message = "";
+			if (CheckModeratorTableNotExists(id, out _, out var message)) return new CommandResult(false, message);
 
-			if (CheckModeratorTableNotExists(id, out _, out message)) return false;
-
-			var salaryTables = _databaseManager.GetMultyDataDB<ModeratorSalaryTable>(table => table.Id == id).Result;
+			var salaryTables = await _databaseManager.GetMultyDataDBAsync<ModeratorSalaryTable>(table => table.Id == id);
 			if (salaryTables == null)
 			{
-				message = author ? "Вы ещё не получали зарплату." : "Зарплата данному пользователю ещё не выплачивалась.";
-				return false;
+				return new CommandResult(false, author ? "Вы ещё не получали зарплату." : "Зарплата данному пользователю ещё не выплачивалась.");
 			}
 
 			var stringBuilder = new StringBuilder();
-			stringBuilder.AppendLine(author 
-				? "**Ваша зарплата за всё время:**" 
-				: $"**Зарплата пользователя {id.GetMention(MentionType.Username)} за всё время:**");
+			if (author)
+			{
+				stringBuilder.AppendLine("**Ваша зарплата за всё время:**");
+			}
+			else
+			{
+				stringBuilder.AppendLine($"**Зарплата пользователя {id.GetMention(MentionType.Username)} за всё время:**");
+			}
+
 			stringBuilder.AppendLine();
 
 			foreach (var table in salaryTables)
 			{
-				stringBuilder.AppendLine($"**С {table.PeriodStartDate.ToShortDateString()} " +
-					$"по {table.PeriodEndDate.ToShortDateString()}:** " +
-					$"{table.Salary} на сервере **{table.ServerName}.**");
+				stringBuilder.Append($"**С {table.PeriodStartDate.ToShortDateString()} ");
+				stringBuilder.Append($"по {table.PeriodEndDate.ToShortDateString()}:** ");
+				stringBuilder.Append($"{table.Salary} на сервере **{table.ServerName}.**");
+				stringBuilder.AppendLine();
 			}
 
-			message = stringBuilder.ToString();
-			return true;
+			return new CommandResult(true, stringBuilder.ToString());
 		}
 
 		private bool TryEditSid(ModeratorTable table, string value, out string message)
@@ -539,11 +507,9 @@ namespace DiscordBot.Server.Commands
 			return true;
 		}
 
-		private void RemoveModeratorTable(ModeratorTable table, string dismissionReason, string reinstatement, out string message)
+		private async Task<CommandResult> RemoveModeratorTable(ModeratorTable table, string dismissionReason, string reinstatement)
 		{
-			message = "";
-
-			_databaseManager.RemoveTable(table).GetResult();
+			await _databaseManager.RemoveTableAsync(table);
 
 			var dismissedTable = new DismissedModeratorTable()
 			{
@@ -562,7 +528,7 @@ namespace DiscordBot.Server.Commands
 
 			_databaseManager.AddOrUpdateTableDB(dismissedTable);
 
-			message = $"Вы сняли {table.Id.GetMention(MentionType.Username)} с поста модератора по причине: {dismissionReason}.";
+			return new CommandResult(true, $"Вы сняли {table.Id.GetMention(MentionType.Username)} с поста модератора по причине: {dismissionReason}.");
 		}
 
 		private bool CheckModeratorTableExists(ulong id, out ModeratorTable table, out string message)
