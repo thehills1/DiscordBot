@@ -8,6 +8,7 @@ namespace DiscordBot.Server
 	{
 		public ServerGlobalCommands ServerGlobalCommands { get; }
 		public ServerShopCommands ServerShopCommands { get; }
+		public ServerRulesCommands ServerRulesCommands { get; }
 		public ServerDatabaseManager DatabaseManager { get; }
 
 		private readonly ServerDatabaseEventHandler _databaseEventHandler;
@@ -16,12 +17,14 @@ namespace DiscordBot.Server
 		public ServerService(
 			ServerGlobalCommands serverGlobalCommands,
 			ServerShopCommands serverShopCommands,
+			ServerRulesCommands serverRulesCommands,
 			ServerDatabaseManager databaseManager,
 			ServerDatabaseEventHandler databaseEventHandler,
 			ServerContext serverContext) 
 		{
 			ServerGlobalCommands = serverGlobalCommands;
 			ServerShopCommands = serverShopCommands;
+			ServerRulesCommands = serverRulesCommands;
 			DatabaseManager = databaseManager;
 			_databaseEventHandler = databaseEventHandler;
 			_serverContext = serverContext;

@@ -1,0 +1,98 @@
+﻿using DiscordBot.Commands;
+using DiscordBot.Server.Commands.ModalForms;
+using DSharpPlus;
+using DSharpPlus.Interactivity.Extensions;
+using DSharpPlus.SlashCommands;
+
+namespace DiscordBot.Server.Commands
+{
+	public class ServerRulesCommands : BaseServerCommands, IRulesCommands
+	{
+		public ServerRulesCommandsManager CommandsManager { get; }
+
+		public ServerRulesCommands(ServerRulesCommandsManager commandsManager)
+		{
+			CommandsManager = commandsManager;
+		}
+
+		public async Task AddSection(InteractionContext context)
+		{
+			var modalFormInfo = EditSectionModalForm.Create();
+			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
+
+			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
+
+			var result = await CommandsManager.TryAddSection(response.Result.Values);
+
+			await SendCommandExecutionResult(response.Result.Interaction, result);
+		}
+
+		public async Task EditSection(InteractionContext context, string sectionNumber)
+		{
+			var result = CommandsManager.TryGetSectionByNumber(sectionNumber, out var section);
+			if (!result.Success)
+			{
+				await SendCommandExecutionResult(context, result);
+				return;
+			}
+
+			var modalFormInfo = EditSectionModalForm.Create(section.Description, section.Number.ToString(), section.Name);
+			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
+
+			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
+
+			result = await CommandsManager.TryEditSection(section, response.Result.Values);
+
+			await SendCommandExecutionResult(response.Result.Interaction, result);
+		}
+
+		public async Task RemoveSection(InteractionContext context, string section)
+		{
+			await context.DeferAsync(true);
+
+			var result = await CommandsManager.TryRemoveSection(section);
+
+			await SendCommandExecutionResult(context, result);
+		}
+
+		public async Task AddRule(InteractionContext context)
+		{
+			var modalFormInfo = EditRuleModalForm.Create();
+			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
+
+			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
+
+			var result = await CommandsManager.TryAddRule(response.Result.Values);
+
+			await SendCommandExecutionResult(response.Result.Interaction, result);
+		}
+
+		public async Task EditRule(InteractionContext context, string sectionAndRuleNumber)
+		{
+			var result = CommandsManager.TryGetRuleByNumber(sectionAndRuleNumber, out var rule);
+			if (!result.Success)
+			{
+				await SendCommandExecutionResult(context, result);
+				return;
+			}
+
+			var modalFormInfo = EditRuleModalForm.Create(sectionAndRuleNumber, rule.SubNumber.ToString(), rule.Name, rule.Punishment, string.Join('\n', rule.Notes));
+			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
+
+			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
+
+			result = await CommandsManager.TryEditRule(rule, response.Result.Values);
+
+			await SendCommandExecutionResult(response.Result.Interaction, result);
+		}
+
+		public async Task RemoveRule(InteractionContext context, string rule)
+		{
+			await context.DeferAsync(true);
+
+			var result = await CommandsManager.TryRemoveRule(rule);
+
+			await SendCommandExecutionResult(context, result);
+		}
+	}
+}

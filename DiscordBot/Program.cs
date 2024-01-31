@@ -16,7 +16,6 @@ namespace DiscordBot
 
 			serviceCollection.AddSingleton<ServiceManager>();
 			serviceCollection.AddSingleton<Bot>();
-			serviceCollection.AddSingleton<MessageManager>();
 			serviceCollection.AddSingleton(container =>
 			{
 				var config = serviceCollection.BuildServiceProvider().GetService<BotConfig>();
@@ -60,6 +59,9 @@ namespace DiscordBot
 			serviceCollection.AddScoped<ServerShopCommands>();
 			serviceCollection.AddScoped<ServerShopCommandsManager>();
 
+			serviceCollection.AddScoped<ServerRulesCommands>();
+			serviceCollection.AddScoped<ServerRulesCommandsManager>();
+
 			serviceCollection.AddScoped(container =>
 			{
 				var serverContext = container.GetService<ServerContext>();
@@ -70,6 +72,12 @@ namespace DiscordBot
 			{
 				var serverContext = container.GetService<ServerContext>();
 				return ShopsConfig.LoadOrCreate(Path.Combine(serverContext.RootServerPath, "shops_config.json"));
+			});
+
+			serviceCollection.AddScoped(container =>
+			{
+				var serverContext = container.GetService<ServerContext>();
+				return RulesConfig.LoadOrCreate(Path.Combine(serverContext.RootServerPath, "rules_config.json"));
 			});
 		}
 
