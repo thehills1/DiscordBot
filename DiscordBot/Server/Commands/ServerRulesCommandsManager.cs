@@ -1,4 +1,4 @@
-﻿using DiscordBot.Configs;
+﻿using DiscordBot.Configs.Rules;
 using DiscordBot.Extensions;
 using DiscordBot.Server.Commands.ModalForms;
 
@@ -8,41 +8,26 @@ namespace DiscordBot.Server.Commands
 	{
 		private readonly Bot _bot;
 
-		public RulesConfig Rules { get; }
+		public RulesConfig RulesConfig { get; }
 
 		public ServerRulesCommandsManager(Bot bot, RulesConfig rules)
 		{
 			_bot = bot;
-			Rules = rules;
+			RulesConfig = rules;
 		}
 
 		public async Task<CommandResult> TryAddSection(IReadOnlyDictionary<string, string> formValues)
 		{
-			if (!CheckSectionNumber(formValues[EditSectionModalForm.SectionNumberCustomId], out var sectionNumber, out var result)) return result;
+			var result = CheckSectionNumber(formValues[EditSectionModalForm.SectionNumberCustomId], out var number);
+			if (!result.Success) return result;
 			
-			var sectionDescription = formValues[EditSectionModalForm.SectionDescriptionCustomId];
-			var sectionName = formValues[EditSectionModalForm.SectionNameCustomId];
+			var description = formValues[EditSectionModalForm.SectionDescriptionCustomId];
+			var name = formValues[EditSectionModalForm.SectionNameCustomId];
 
-			var section = new RulesSection() 
-			{ 
-				Description = sectionDescription,
-				Number = sectionNumber, 
-				Name = sectionName, 
-				Rules = new List<Rule>() 
-			};
+			var section = new RulesSection(number, name, description);
+			RulesConfig.AddSection(section);
 
-			if (sectionNumber > Rules.Sections.Count)
-			{
-				Rules.Sections.Add(section);
-			}
-			else
-			{
-				Rules.Sections.Insert(sectionNumber - 1, section);
-			}
-
-			Rules.UpdateNumbers();
-			Rules.Save();
-
+			RulesConfig.Save();
 			await UpdateMessages();
 
 			return new CommandResult(true, "Раздел успешно добавлен.");
@@ -50,46 +35,38 @@ namespace DiscordBot.Server.Commands
 
 		public async Task<CommandResult> TryEditSection(RulesSection oldSection, IReadOnlyDictionary<string, string> formValues)
 		{
-			if (!CheckSectionNumber(formValues[EditSectionModalForm.SectionNumberCustomId], out var sectionNumber, out var result)) return result;
+			var result = CheckSectionNumber(formValues[EditSectionModalForm.SectionNumberCustomId], out var number, true);
+			if (!result.Success) return result;
 
-			var sectionDescription = formValues[EditSectionModalForm.SectionDescriptionCustomId];
-			var sectionName = formValues[EditSectionModalForm.SectionNameCustomId];
+			var description = formValues[EditSectionModalForm.SectionDescriptionCustomId];
+			var name = formValues[EditSectionModalForm.SectionNameCustomId];
 
-			oldSection.Description = sectionDescription;
-			oldSection.Name = sectionName;
+			oldSection.SetDescription(description);
+			oldSection.SetName(name);
 
-			if (oldSection.Number != sectionNumber)
-			{
-				if (sectionNumber > Rules.Sections.Count)
-				{
-					Rules.Sections.Add(oldSection);
-				}
-				else
-				{
-					Rules.Sections.Insert(sectionNumber - 1, oldSection);
-				}
+			if (oldSection.Number != number) RulesConfig.MoveSection(oldSection, number);
 
-				Rules.Sections.RemoveAt(oldSection.Number - 1);
-			}
-
-			Rules.UpdateNumbers();
-			Rules.Save();
+			RulesConfig.Save();
 
 			await UpdateMessages();
 
-			return new CommandResult(true, "Раздел успешно добавлен.");
+			return new CommandResult(true, "Раздел успешно изменён.");
 		}
 
-		public async Task<CommandResult> TryRemoveSection(string rawSectionNumber)
+		public async Task<CommandResult> TryRemoveSection(string rawNumber)
 		{
-			if (!int.TryParse(rawSectionNumber, out var sectionNumber))
+			var result = CheckSectionNumber(rawNumber, out var number, true);
+			if (!result.Success) return result;
+
+			var section = RulesConfig.Sections[number - 1];
+			foreach (var messageId in section.MessageIds)
 			{
-				return new CommandResult(false, "Введён некорректный номер раздела.");
+				await _bot.DeleteMessageAsync(RulesConfig.RulesChannelId, messageId);
 			}
 
-			Rules.Sections.RemoveAt(sectionNumber - 1);
-			Rules.UpdateNumbers();
-			Rules.Save();
+			RulesConfig.RemoveSection(section);
+
+			RulesConfig.Save();
 
 			await UpdateMessages();
 
@@ -99,31 +76,21 @@ namespace DiscordBot.Server.Commands
 		public async Task<CommandResult> TryAddRule(IReadOnlyDictionary<string, string> formValues)
 		{
 			var rawSectionAndRuleNumbers = formValues[EditRuleModalForm.SectionAndRuleNumberCustomId];
-			if (!CheckRuleNumber(rawSectionAndRuleNumbers, out var sectionNumber, out var ruleNumber, out var result)) return result;
+			var result = CheckFullRuleNumber(rawSectionAndRuleNumbers, out var sectionNumber, out var ruleNumber, out _);
+			if (!result.Success) return result;
 
-			var ruleSubNumber = 0;
-			if (!formValues[EditRuleModalForm.RuleSubNumberCustomId].IsNullOrEmpty() && !int.TryParse(formValues[EditRuleModalForm.RuleSubNumberCustomId], out ruleSubNumber))
-			{
-				return new CommandResult(false, "Введён некорректный подпункт правила.");
-			}
+			result = CheckRuleSubNumber(formValues[EditRuleModalForm.RuleSubNumberCustomId], out var ruleSubNumber);
+			if (!result.Success) return result;
 
 			var ruleName = formValues[EditRuleModalForm.RuleNameCustomId];
 			var rulePunishment = formValues[EditRuleModalForm.RulePunishmentCustomId];
 			var notes = formValues[EditRuleModalForm.RuleNotesCustomId];
-			var notesList = notes.IsNullOrEmpty() ? new List<string>() : notes.Split("\n").ToList();
+			var notesList = notes.IsNullOrEmpty() ? new List<string>() : notes.Split("\n").Where(str => str != string.Empty).ToList();
 
-			var rule = new Rule() 
-			{ 
-				SectionNumber = sectionNumber,
-				Number = ruleNumber, 
-				SubNumber = ruleSubNumber,
-				Name = ruleName, 
-				Punishment = rulePunishment,
-				Notes = notesList
-			};
+			var rule = new Rule(sectionNumber, ruleNumber, ruleName, ruleSubNumber, rulePunishment, notesList);
 
-			Rules.Sections[sectionNumber - 1].AddRule(rule);
-			Rules.Save();
+			RulesConfig.Sections[sectionNumber - 1].AddRule(rule);
+			RulesConfig.Save();
 
 			await UpdateMessages();
 
@@ -133,61 +100,57 @@ namespace DiscordBot.Server.Commands
 		public async Task<CommandResult> TryEditRule(Rule oldRule, IReadOnlyDictionary<string, string> formValues)
 		{
 			var rawSectionAndRuleNumbers = formValues[EditRuleModalForm.SectionAndRuleNumberCustomId];
-			if (!CheckRuleNumber(rawSectionAndRuleNumbers, out var sectionNumber, out var ruleNumber, out var result)) return result;
+			var result = CheckFullRuleNumber(rawSectionAndRuleNumbers, out var sectionNumber, out var ruleNumber, out _, true);
+			if (!result.Success) return result;
 
-			var ruleSubNumber = 0;
-			if (!formValues[EditRuleModalForm.RuleSubNumberCustomId].IsNullOrEmpty() && !int.TryParse(formValues[EditRuleModalForm.RuleSubNumberCustomId], out ruleSubNumber))
-			{
-				return new CommandResult(false, "Введён некорректный подпункт правила.");
-			}
-
+			result = CheckRuleSubNumber(formValues[EditRuleModalForm.RuleSubNumberCustomId], out var ruleSubNumber);
+			if (!result.Success) return result;
+			
 			var ruleName = formValues[EditRuleModalForm.RuleNameCustomId];
 			var rulePunishment = formValues[EditRuleModalForm.RulePunishmentCustomId];
 			var notes = formValues[EditRuleModalForm.RuleNotesCustomId];
 			var notesList = notes.IsNullOrEmpty() ? new List<string>() : notes.Split("\n").ToList();
+			
+			oldRule.SetName(ruleName);
+			oldRule.SetPunishment(rulePunishment);
 
-			oldRule.Number = ruleNumber;
-			oldRule.SubNumber = ruleSubNumber;
-			oldRule.Name = ruleName;
-			oldRule.Punishment = rulePunishment;
-			oldRule.Notes = notesList;
-
-			if (oldRule.SectionNumber != sectionNumber)
+			oldRule.ClearNotes();
+			foreach (var note in notesList)
 			{
-				var newSection = Rules.Sections[sectionNumber - 1];
-				Rules.Sections[oldRule.SectionNumber - 1].Rules.Remove(oldRule);
-
-				oldRule.SectionNumber = sectionNumber;
-
-				newSection.AddRule(oldRule);
+				oldRule.AddNote(note);
 			}
 
-			Rules.Save();
+			if (oldRule.SectionNumber == sectionNumber && oldRule.Number != ruleNumber)
+			{
+				var currentSection = RulesConfig.Sections[sectionNumber - 1];
+				currentSection.MoveRule(oldRule, ruleNumber, ruleSubNumber);
+			}
+			else
+			{
+				RulesConfig.Sections[oldRule.SectionNumber - 1].RemoveRule(oldRule);
+
+				oldRule.SetNumber(ruleNumber);
+				oldRule.SetSubNumber(ruleSubNumber);
+
+				RulesConfig.Sections[sectionNumber - 1].AddRule(oldRule);
+			}
+
+			RulesConfig.Save();
 
 			await UpdateMessages();
 
 			return new CommandResult(true, "Правило успешно изменено.");
 		}
 
-		public async Task<CommandResult> TryRemoveRule(string rawSectionAndRuleNumbers)
+		public async Task<CommandResult> TryRemoveRule(string rawFullRuleNumber)
 		{
-			if (!rawSectionAndRuleNumbers.Contains('.')) return new CommandResult(false, "Неверно указаны номер раздела и правила.");
+			var result = CheckFullRuleNumber(rawFullRuleNumber, out var sectionNumber, out var ruleNumber, out _, true);
+			if (!result.Success) return result;
 
-			var split = rawSectionAndRuleNumbers.Split('.');
-			if (!int.TryParse(split[0], out var sectionNumber))
-			{
-				return new CommandResult(false, "Введён некорректный номер раздела.");
-			}
+			var currentSection = RulesConfig.Sections[sectionNumber - 1];
+			currentSection.RemoveRule(currentSection.Rules[ruleNumber - 1]);
 
-			if (!int.TryParse(split[1], out var ruleNumber))
-			{
-				return new CommandResult(false, "Введён некорректный номер правила.");
-			}
-
-			Rules.Sections[sectionNumber - 1].Rules.RemoveAt(ruleNumber - 1);
-			Rules.Sections[sectionNumber - 1].DecrementNumbers(ruleNumber - 1);
-
-			Rules.Save();
+			RulesConfig.Save();
 
 			await UpdateMessages();
 
@@ -198,58 +161,69 @@ namespace DiscordBot.Server.Commands
 		{
 			section = null;
 
-			if (!int.TryParse(rawSectionNumber, out var sectionNumber)) return new CommandResult(false, "Номер раздела не является числом.");
+			var result = CheckSectionNumber(rawSectionNumber, out var sectionNumber);
+			if (!result.Success) return result;
 
-			section = Rules.Sections[sectionNumber - 1];
+			section = RulesConfig.Sections[sectionNumber - 1];
 			return new CommandResult(true);
 		}
 
-		public CommandResult TryGetRuleByNumber(string rawRuleNumber, out Rule rule)
+		public CommandResult TryGetRuleByNumber(string rawSectionAndRuleNumbers, out Rule rule)
 		{
 			rule = null;
 
-			if (!rawRuleNumber.Contains('.')) return new CommandResult(false, "Неверно указаны номер раздела и правила.");
-			var split = rawRuleNumber.Split('.');
-			if (!int.TryParse(split[0], out var sectionNumber)) return new CommandResult(false, "Номер раздела не является числом.");
-			if (!int.TryParse(split[1], out var ruleNumber)) return new CommandResult(false, "Номер правила не является числом.");
+			var result = CheckFullRuleNumber(rawSectionAndRuleNumbers, out var sectionNumber, out var ruleNumber, out var ruleSubNumber, true);
+			if (!result.Success) return result;
 
-			rule = Rules.Sections[sectionNumber - 1].Rules[ruleNumber - 1];
+			rule = RulesConfig.Sections[sectionNumber - 1].Rules.First(r => r.Number == ruleNumber && r.SubNumber == ruleSubNumber);
 			return new CommandResult(true);
 		}
 
-		private async Task UpdateMessages()
+		public async Task UpdateMessages()
 		{
-			var channelToSend = await _bot.GetChannelAsync(Rules.RulesChannelId);
-			if (Rules.Sections.Any(section => section.MessageIds == null || section.MessageIds?.Count == 0))
+			if (!RulesConfig.Sections.Any()) return;
+
+			var channelToSend = await _bot.GetChannelAsync(RulesConfig.RulesChannelId);
+			if (RulesConfig.Sections.Any(section => section.MessageIds == null || section.MessageIds?.Count == 0))
 			{
-				foreach (var section in Rules.Sections)
+				foreach (var section in RulesConfig.Sections)
 				{
-					section.MessageIds = new List<ulong>();
+					foreach (var oldMessageId in section.MessageIds)
+					{
+						await _bot.DeleteMessageAsync(channelToSend, oldMessageId);
+					}
+
+					section.ClearMessageIds();
 
 					var messagesToSend = section.GenerateMessagesToSend();
 					foreach (var message in messagesToSend)
 					{
 						var sentMessage = await message.SendAsync(channelToSend);
-						section.MessageIds.Add(sentMessage.Id);
+						section.AddMessageId(sentMessage.Id);
 					}
 				}
 
-				Rules.Save();
+				RulesConfig.Save();
 				return;
 			}
 
-			if (Rules.Sections.Any(section => section.MessageIds.Count != section.GenerateMessagesToSend().Count))
+			if (RulesConfig.Sections.Any(section => section.MessageIds.Count != section.GenerateMessagesToSend().Count))
 			{
-				foreach (var section in Rules.Sections)
+				foreach (var section in RulesConfig.Sections)
 				{
-					section.MessageIds.Clear();
+					foreach (var messageId in section.MessageIds)
+					{
+						await _bot.DeleteMessageAsync(RulesConfig.RulesChannelId, messageId);
+					}
+
+					section.ClearMessageIds();
 				}
 
 				await UpdateMessages();
 				return;
 			}
 
-			foreach (var section in Rules.Sections)
+			foreach (var section in RulesConfig.Sections)
 			{
 				var messagesToUpdate = section.GenerateMessagesToSend();
 				for (int i = 0; i < section.MessageIds.Count; i++)
@@ -259,62 +233,95 @@ namespace DiscordBot.Server.Commands
 			}
 		}
 
-		private bool CheckRuleNumber(string rawSectionAndRuleNumbers, out int sectionNumber, out int ruleNumber, out CommandResult result)
+		private CommandResult CheckFullRuleNumber(string rawFullRuleNumbers, out int sectionNumber, out int ruleNumber, out int ruleSubNumber, bool checkRuleExists = false)
 		{
-			result = null;
-			sectionNumber = ruleNumber = 0;
+			sectionNumber = ruleNumber = ruleSubNumber = 0;
 
-			if (!rawSectionAndRuleNumbers.Contains('.'))
+			var split = rawFullRuleNumbers.Split('.');
+			if (!rawFullRuleNumbers.Contains('.') || split.Length < 2 || split.Length > 3) return new CommandResult(false, "Неверно указаны номер раздела и правила.");
+
+			var result = CheckSectionNumber(split[0], out sectionNumber, true);
+			if (!result.Success) return result;
+
+			result = CheckRuleNumber(sectionNumber, split[1], out ruleNumber, checkRuleExists);
+			if (!result.Success) return result;
+
+			if (split.Length == 3)
 			{
-				result = new CommandResult(false, "Неверно указаны номер раздела и правила.");
-				return false;
+				result = CheckRuleSubNumber(split[2], out ruleSubNumber);
+				if (!result.Success) return result;
 			}
 
-			var split = rawSectionAndRuleNumbers.Split('.');
-			if (!int.TryParse(split[0], out sectionNumber))
-			{
-				result = new CommandResult(false, "Введён некорректный номер раздела.");
-				return false;
-			}
-
-			if (!int.TryParse(split[1], out ruleNumber))
-			{
-				result = new CommandResult(false, "Введён некорректный номер правила.");
-				return false;
-			}
-
-			if (ruleNumber <= 0)
-			{
-				result = new CommandResult(false, "Номер правила не может быть меньше нуля или равен нулю.");
-				return false;
-			}
-
-			if (ruleNumber > Rules.Sections[sectionNumber - 1].Rules.Count + 1)
-			{
-				result = new CommandResult(false, "Нельзя добавить правило, номер которого больше чем на 1 по сравнению с последним.");
-				return false;
-			}
-
-			return true;
+			return new CommandResult(true);
 		}
 
-		private bool CheckSectionNumber(string rawSectionNumber, out int sectionNumber, out CommandResult result)
+		private CommandResult CheckSectionNumber(string rawSectionNumber, out int sectionNumber, bool checkOnExists = false)
 		{
-			result = null;
-
 			if (!int.TryParse(rawSectionNumber, out sectionNumber))
 			{
-				result = new CommandResult(false, "Введён некорректный номер раздела правил.");
-				return false;
+				return new CommandResult(false, "Введён некорректный номер раздела правил.");
 			}
 
 			if (sectionNumber <= 0)
 			{
-				result = new CommandResult(false, "Номер раздела не может быть меньше нуля или равен нулю.");
-				return false;
+				return new CommandResult(false, "Номер раздела не может быть меньше нуля или равен нулю.");
 			}
 
-			return true;
+			if (sectionNumber > RulesConfig.Sections.Count + 1)
+			{
+				return new CommandResult(false, "Нельзя добавить раздел правил, номер которого больше чем на 1 по сравнению с последним.");
+			}
+
+			if (checkOnExists)
+			{
+				if (RulesConfig.Sections.Count < sectionNumber) return new CommandResult(false, "Раздел с таким номером не существует.");
+			}
+
+			return new CommandResult(true);
+		}
+
+		private CommandResult CheckRuleNumber(int sectionNumber, string rawRuleNumber, out int ruleNumber, bool checkOnExists = false)
+		{
+			if (!int.TryParse(rawRuleNumber, out ruleNumber))
+			{
+				return new CommandResult(false, "Введён некорректный номер правила.");
+			}
+
+			if (ruleNumber <= 0)
+			{
+				return new CommandResult(false, "Номер правила не может быть меньше нуля или равен нулю.");
+			}
+
+			if (ruleNumber > RulesConfig.Sections[sectionNumber - 1].Rules.Count + 1)
+			{
+				return new CommandResult(false, "Нельзя добавить правило, номер которого больше чем на 1 по сравнению с последним.");
+			}
+
+			if (checkOnExists)
+			{
+				if (RulesConfig.Sections[sectionNumber - 1].Rules.Count < ruleNumber) return new CommandResult(false, "Правило с таким номером не существует.");
+			}
+
+			return new CommandResult(true);
+		}
+
+		private CommandResult CheckRuleSubNumber(string rawSubNumber, out int subNumber)
+		{
+			subNumber = 0;
+
+			if (rawSubNumber.IsNullOrEmpty()) return new CommandResult(true);
+
+			if (!int.TryParse(rawSubNumber, out subNumber))
+			{
+				return new CommandResult(false, "Введён некорректный номер подпункта.");
+			}
+
+			if (subNumber < 0)
+			{
+				return new CommandResult(false, "Номер подпункта не может быть меньше нуля.");
+			}
+
+			return new CommandResult(true);
 		}
 	}
 }

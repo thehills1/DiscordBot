@@ -15,5 +15,7 @@ namespace DiscordBot.Commands
 		Task EditRule(InteractionContext context, string rule);
 
 		Task RemoveRule(InteractionContext context, string rule);
+
+		Task Update(InteractionContext context);
 	}
 }

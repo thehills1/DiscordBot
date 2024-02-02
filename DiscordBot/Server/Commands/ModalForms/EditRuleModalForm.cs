@@ -15,19 +15,19 @@ namespace DiscordBot.Server.Commands.ModalForms
 
 		public static int UniqueId = 0;
 
-		public static ModalFormInfo Create()
+		public static ModalFormInfo Create(string formTitle)
 		{
-			return Create(null, null, null, null, null);
+			return Create(formTitle, null, null, null, null, null);
 		}
 
-		public static ModalFormInfo Create(string sectionAndRuleNumber, string ruleSubNumber, string ruleName, string rulePunishment, string ruleNotes)
+		public static ModalFormInfo Create(string formTitle, string sectionAndRuleNumber, string ruleSubNumber, string ruleName, string rulePunishment, string ruleNotes)
 		{
 			lock (_createSync)
 			{
 				var customId = $"add_rule_form_{UniqueId++}";
 				var form = new DiscordInteractionResponseBuilder()
 					.WithCustomId(customId)
-					.WithTitle("Добавление или изменение правила")
+					.WithTitle(formTitle)
 					.AddComponents(new TextInputComponent("Номер раздела и правила:", SectionAndRuleNumberCustomId, "Номер раздела и правила через точку.", sectionAndRuleNumber))
 					.AddComponents(new TextInputComponent("Подпункт правила:", RuleSubNumberCustomId, value: ruleSubNumber, required: false))
 					.AddComponents(new TextInputComponent("Название правила:", RuleNameCustomId, value: ruleName))

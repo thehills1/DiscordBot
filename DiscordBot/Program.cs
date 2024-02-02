@@ -1,4 +1,5 @@
 ﻿using DiscordBot.Configs;
+using DiscordBot.Configs.Rules;
 using DiscordBot.Server;
 using DiscordBot.Server.Commands;
 using DiscordBot.Server.Database;
@@ -19,7 +20,6 @@ namespace DiscordBot
 			serviceCollection.AddSingleton(container =>
 			{
 				var config = serviceCollection.BuildServiceProvider().GetService<BotConfig>();
-
 				return new DiscordClient(new DiscordConfiguration
 				{
 					Token = config.Token,

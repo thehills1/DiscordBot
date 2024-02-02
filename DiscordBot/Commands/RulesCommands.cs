@@ -47,11 +47,17 @@ namespace DiscordBot.Commands
 			await _serviceManager.GetServerService(context.Guild.Id).ServerRulesCommands.EditRule(context, rule);
 		}
 
-		[SlashCommand("removerule", "Редактировать правило.", false)]
+		[SlashCommand("removerule", "Удалить правило.", false)]
 		public async Task RemoveRule(InteractionContext context,
 			[Option(nameof(rule), "Правило, которое нужно отредактировать.", true)][Autocomplete(typeof(RulesListAutocompleteProvider))] string rule)
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerRulesCommands.RemoveRule(context, rule);
+		}
+
+		[SlashCommand("update", "Обновить список правил.", false)]
+		public async Task Update(InteractionContext context)
+		{
+			await _serviceManager.GetServerService(context.Guild.Id).ServerRulesCommands.Update(context);
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using DiscordBot.Commands;
+using DiscordBot.Configs;
 using DiscordBot.Server.Commands.ModalForms;
 using DSharpPlus;
 using DSharpPlus.Interactivity.Extensions;
@@ -17,11 +18,12 @@ namespace DiscordBot.Server.Commands
 
 		public async Task AddSection(InteractionContext context)
 		{
-			var modalFormInfo = EditSectionModalForm.Create();
+			var modalFormInfo = EditSectionModalForm.Create("Добавление раздела правил");
 			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
 
 			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
 
+			if (response.Result == null) return;
 			var result = await CommandsManager.TryAddSection(response.Result.Values);
 
 			await SendCommandExecutionResult(response.Result.Interaction, result);
@@ -36,11 +38,12 @@ namespace DiscordBot.Server.Commands
 				return;
 			}
 
-			var modalFormInfo = EditSectionModalForm.Create(section.Description, section.Number.ToString(), section.Name);
+			var modalFormInfo = EditSectionModalForm.Create("Изменение раздела правил", section.Description, section.Number.ToString(), section.Name);
 			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
 
 			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
 
+			if (response.Result == null) return;
 			result = await CommandsManager.TryEditSection(section, response.Result.Values);
 
 			await SendCommandExecutionResult(response.Result.Interaction, result);
@@ -57,11 +60,12 @@ namespace DiscordBot.Server.Commands
 
 		public async Task AddRule(InteractionContext context)
 		{
-			var modalFormInfo = EditRuleModalForm.Create();
+			var modalFormInfo = EditRuleModalForm.Create("Добавление правила");
 			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
 
 			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
 
+			if (response.Result == null) return;
 			var result = await CommandsManager.TryAddRule(response.Result.Values);
 
 			await SendCommandExecutionResult(response.Result.Interaction, result);
@@ -76,11 +80,13 @@ namespace DiscordBot.Server.Commands
 				return;
 			}
 
-			var modalFormInfo = EditRuleModalForm.Create(sectionAndRuleNumber, rule.SubNumber.ToString(), rule.Name, rule.Punishment, string.Join('\n', rule.Notes));
+			var rawRuleNumber = $"{rule.SectionNumber}.{rule.Number}";
+			var modalFormInfo = EditRuleModalForm.Create("Изменение правила", rawRuleNumber, rule.SubNumber.ToString(), rule.Name, rule.Punishment, string.Join('\n', rule.Notes));
 			await context.Interaction.CreateResponseAsync(InteractionResponseType.Modal, modalFormInfo.Form);
 
 			var response = await context.Client.GetInteractivity().WaitForModalAsync(modalFormInfo.CustomId);
 
+			if (response.Result == null) return;
 			result = await CommandsManager.TryEditRule(rule, response.Result.Values);
 
 			await SendCommandExecutionResult(response.Result.Interaction, result);
@@ -93,6 +99,15 @@ namespace DiscordBot.Server.Commands
 			var result = await CommandsManager.TryRemoveRule(rule);
 
 			await SendCommandExecutionResult(context, result);
+		}
+
+		public async Task Update(InteractionContext context)
+		{
+			await context.DeferAsync(true);
+
+			await CommandsManager.UpdateMessages();
+
+			await SendCommandExecutionResult(context, new CommandResult(true, "Список правил успешно обновлен."));
 		}
 	}
 }
