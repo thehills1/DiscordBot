@@ -2,6 +2,15 @@
 {
 	public class StaffInfoMessagesConfig : BaseConfig<StaffInfoMessagesConfig>
 	{
-		public Dictionary<ulong, ulong> SentMessageIds { get; set; }
+		public List<MessageInfo> SentMessagesIds { get; set; }
+	}
+
+	public class MessageInfo
+	{
+		public ulong ChannelId { get; set; }
+
+		public ulong MessageId { get; set; }
+
+		public bool AllTables { get; set; }
 	}
 }

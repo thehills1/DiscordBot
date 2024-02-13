@@ -60,7 +60,7 @@ namespace DiscordBot.Server.Database
 		{
 			lock (_sendStaffInfoTimer)
 			{
-				_commandsManager.TrySendExcelStaffWorksheetAsync(_bot.GetChannelAsync(_serverConfig.InfoChannelId).Result, false).Wait();
+				_commandsManager.TrySendExcelStaffWorksheetAsync(_bot.GetChannelAsync(_serverConfig.InfoChannelId).Result).Wait();
 				_commandsManager.TrySendExcelStaffWorksheetAsync(_bot.GetChannelAsync(_serverConfig.HeadModChannelId).Result, true, true).Wait();
 			}
 		}

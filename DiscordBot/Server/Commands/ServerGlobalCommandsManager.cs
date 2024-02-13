@@ -148,7 +148,7 @@ namespace DiscordBot.Server.Commands
 			return new CommandResult(true, message);
 		}
 
-		public async Task<CommandResult> TrySendExcelStaffWorksheetAsync(DiscordChannel channel, bool allTables, bool pinMessage = false)
+		public async Task<CommandResult> TrySendExcelStaffWorksheetAsync(DiscordChannel channel, bool allTables = false, bool pinMessage = false)
 		{
 			var tables = new List<ITableCollection>();
 
@@ -166,9 +166,12 @@ namespace DiscordBot.Server.Commands
 			var fileName = Path.Combine(_serverContext.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".")}.xlsx");
 			var messageContent = "Актуальный список модераторов:";
 
-			if (_infoMessagesConfig.SentMessageIds?.TryGetValue(channel.Id, out var messageId) ?? false)
+			var oldMessage = _infoMessagesConfig.SentMessagesIds?.FirstOrDefault(msg => msg.ChannelId == channel.Id && msg.AllTables == allTables);
+			if (oldMessage is not null)
 			{
-				await _bot.DeleteMessageAsync(channel, messageId);
+				await _bot.DeleteMessageAsync(channel, oldMessage.MessageId);
+
+				_infoMessagesConfig.SentMessagesIds.Remove(oldMessage);
 			}
 
 			if (!ExcelWorksheetCreator.TryGenerateAndSaveFile(tables, fileName))
@@ -185,8 +188,17 @@ namespace DiscordBot.Server.Commands
 
 				if (pinMessage) await sentMessage.PinAsync();
 
-				_infoMessagesConfig.SentMessageIds ??= new Dictionary<ulong, ulong>();
-				_infoMessagesConfig.SentMessageIds.Add(channel.Id, sentMessage.Id);
+				_infoMessagesConfig.SentMessagesIds ??= new List<MessageInfo>();
+
+				var messageInfo = new MessageInfo()
+				{
+					ChannelId = channel.Id,
+					MessageId = sentMessage.Id,
+					AllTables = allTables
+				};
+
+				_infoMessagesConfig.SentMessagesIds.Add(messageInfo);
+				
 				_infoMessagesConfig.Save();
 			}
 
