@@ -1,4 +1,5 @@
 ﻿using DiscordBot.Commands;
+using DiscordBot.Extensions;
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.Interactivity;
@@ -29,143 +30,214 @@ namespace DiscordBot
 			await RunAsync();
 		}
 
-		
+
 		#region Messages
-		public async Task<DiscordMessage> GetMessageAsync(ulong channelId, ulong messageId) => await (await GetChannelAsync(channelId)).GetMessageAsync(messageId);
+		public async Task<bool> MessageExistsAsync(ulong channelId, ulong messageId) => await GetMessageAsync(channelId, messageId) != null;
+
+		public async Task<bool> MessageExistsAsync(DiscordChannel channel, ulong messageId) => await GetMessageAsync(channel, messageId) != null;
+
+		public async Task<DiscordMessage> GetMessageAsync(ulong channelId, ulong messageId)
+		{
+			var channel = await GetChannelAsync(channelId);
+			return await GetMessageAsync(channel, messageId);
+		}
+
+		public async Task<DiscordMessage> GetMessageAsync(DiscordChannel channel, ulong messageId)
+		{
+			if (channel == null) return null;
+
+			try
+			{
+				return await channel.GetMessageAsync(messageId);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"Error while getting message, [messageId]=[{messageId}]:\n{e}");
+				return null;
+			}
+		}
 
 		public async Task<DiscordMessage> SendMessageAsync(ulong channelId, string content = null, List<DiscordEmbed> embeds = null, FileStream file = null)
 		{
-			return await SendMessageAsync(await GetChannelAsync(channelId), content, embeds, file);
+			var channel = await GetChannelAsync(channelId);
+			return await SendMessageAsync(channel, content, embeds, file);
 		}
 
 		public async Task<DiscordMessage> SendMessageAsync(DiscordChannel channel, string content = null, List<DiscordEmbed> embeds = null, FileStream file = null)
 		{
+			if (channel == null) return null;	
+
 			var messageBuilder = new DiscordMessageBuilder();
-
-			if (content != null) messageBuilder = messageBuilder.WithContent(content);
-			if (file != null) messageBuilder = messageBuilder.AddFile(file);
-
-			if (embeds != null)
-			{
-				foreach (var embed in embeds)
-				{
-					messageBuilder = messageBuilder.AddEmbed(embed);
-				}
-			}
 
 			messageBuilder = messageBuilder.WithAllowedMentions(Mentions.All);
 
-			return await messageBuilder.SendAsync(channel);
-		}
+			if (!content.IsNullOrEmpty()) messageBuilder = messageBuilder.WithContent(content);
+			if (embeds != null || (embeds?.Any() ?? false)) messageBuilder = messageBuilder.AddEmbeds(embeds);
+			if (file != null) messageBuilder = messageBuilder.AddFile(file.Name, file);
 
-		public async Task<List<DiscordMessage>> SendMessagesAsync(DiscordChannel channel, List<string> contents)
-		{
-			var output = new List<DiscordMessage>();
-
-			foreach (var content in contents)
+			try
 			{
-				output.Add(await SendMessageAsync(channel, content));
+				return await messageBuilder.SendAsync(channel);
 			}
-
-			return output;
-		}
-
-		public async Task<List<DiscordMessage>> EditMessagesAsync(ulong channelId, List<ulong> messageIds, List<string> contents)
-		{
-			if (messageIds.Count != contents.Count) return null;
-
-			var channel = await GetChannelAsync(channelId);
-			var messages = new List<DiscordMessage>();
-			for (int i = 0; i < messageIds.Count; i++)
+			catch (Exception e)
 			{
-				messages.Add(await channel.GetMessageAsync(messageIds[i]));
+				Console.WriteLine($"Error while sending message, [channelId]=[{channel?.Id}]\n{e}");
+				return null;
 			}
-
-			return await EditMessagesAsync(messages, contents);
 		}
 
-		public async Task<List<DiscordMessage>> EditMessagesAsync(List<DiscordMessage> messages, List<string> contents)
+		public async Task<DiscordMessage> EditMessageAsync(ulong channelId, ulong messageId, string content = null, List<DiscordEmbed> embeds = null, FileStream file = null)
 		{
-			if (messages.Count != contents.Count) return null;
+			var message = await GetMessageAsync(channelId, messageId);
+			if (message == null) return null;
 
-			var output = new List<DiscordMessage>();
-			for (int i = 0; i < messages.Count; i++)
+			return await EditMessageAsync(message, content, embeds, file);
+		}
+
+		public async Task<DiscordMessage> EditMessageAsync(DiscordChannel channel, ulong messageId, string content = null, List<DiscordEmbed> embeds = null, FileStream file = null)
+		{
+			var message = await GetMessageAsync(channel, messageId);
+			if (message == null) return null;
+
+			return await EditMessageAsync(message, content, embeds, file);
+		}
+
+		public async Task<DiscordMessage> EditMessageAsync(DiscordMessage message, string content = null, List<DiscordEmbed> embeds = null, FileStream file = null)
+		{
+			var messageBuilder = new DiscordMessageBuilder();
+
+			messageBuilder = messageBuilder.WithAllowedMentions(Mentions.All);
+
+			if (!content.IsNullOrEmpty()) messageBuilder = messageBuilder.WithContent(content);
+			if (embeds != null || (embeds?.Any() ?? false)) messageBuilder = messageBuilder.AddEmbeds(embeds);
+			if (file != null) messageBuilder = messageBuilder.AddFile(file.Name, file);
+
+			try
 			{
-				output.Add(await messages[i].ModifyAsync(contents[i]));
+				return await message.ModifyAsync(messageBuilder);
 			}
-
-			return output;
-		}
-
-		public async Task<DiscordMessage> EditMessageAsync(ulong channelId, ulong messageId, string content = null, List<DiscordEmbed> embeds = null)
-		{
-			return await EditMessageAsync(await GetChannelAsync(channelId), messageId, content, embeds);
-		}
-
-		public async Task<DiscordMessage> EditMessageAsync(DiscordChannel channel, ulong messageId, string content = null, List<DiscordEmbed> embeds = null)
-		{
-			return await EditMessageAsync(await channel.GetMessageAsync(messageId), content, embeds);
-		}
-
-		public async Task<DiscordMessage> EditMessageAsync(DiscordMessage message, string content = null, List<DiscordEmbed> embeds = null)
-		{
-			var builder = new DiscordMessageBuilder().WithContent(content).AddEmbeds(embeds).WithAllowedMentions(Mentions.All);
-			return await message.ModifyAsync(builder);
-		}
-
-		public async Task DeleteMessageAsync(DiscordMessage message)
-		{
-			await message.DeleteAsync();
+			catch (Exception e)
+			{
+				Console.WriteLine($"Error while editing message, [messageId]=[{message?.Id}]\n{e}");
+				return null;
+			}
 		}
 
 		public async Task DeleteMessageAsync(DiscordChannel channel, ulong messageId)
 		{
-			await (await channel.GetMessageAsync(messageId)).DeleteAsync();
+			var message = await GetMessageAsync(channel, messageId);
+			await DeleteMessageAsync(message);
 		}
 
 		public async Task DeleteMessageAsync(ulong channelId, ulong messageId)
 		{
-			await (await GetMessageAsync(channelId, messageId)).DeleteAsync();
+			var message = await GetMessageAsync(channelId, messageId);
+			await DeleteMessageAsync(message);
 		}
 
-		public async Task<bool> MessageExistsAsync(ulong channelId, ulong messageId)
+		public async Task DeleteMessageAsync(DiscordMessage message)
 		{
-			var channel = await GetChannelAsync(channelId);
-			return await MessageExistsAsync(channel, messageId);
-		}
+			if (message == null) return;
 
-		public async Task<bool> MessageExistsAsync(DiscordChannel channel, ulong messageId)
-		{
 			try
 			{
-				var message = await channel.GetMessageAsync(messageId);
-				return message != null;
+				await message.DeleteAsync();
 			}
-			catch
+			catch (Exception e)
 			{
-				return false;
+				Console.WriteLine($"Error while deleting message, [messageId]=[{message.Id}]:\n{e}");
+				return;
 			}
 		}
 		#endregion
 
 		#region Channels
-		public async Task<DiscordChannel> GetChannelAsync(ulong id) => await _client.GetChannelAsync(id);
+		public async Task<DiscordChannel> GetChannelAsync(ulong channelId)
+		{
+			try
+			{
+				return await _client.GetChannelAsync(channelId);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"Error while getting channel, [channelId]=[{channelId}]:\n{e}");
+				return null;
+			}
+		}
 
-		public async Task DeleteChannelAsync(ulong channelId) => await (await GetChannelAsync(channelId)).DeleteAsync();
+		public async Task DeleteChannelAsync(ulong channelId)
+		{
+			var channel = await GetChannelAsync(channelId);
+			if (channel == null) return;
 
-		public async Task<IReadOnlyList<DiscordChannel>> GetAllChannelsAsync(ulong guildId) => await (await GetGuildAsync(guildId)).GetChannelsAsync();
+			await channel.DeleteAsync();
+		}
+
+		public async Task<List<DiscordChannel>> GetChannelsAsync(ulong guildId, Func<DiscordChannel, bool> selector)
+		{
+			var channels = await GetChannelsAsync(guildId);
+			return channels.Where(selector).ToList();
+		}
+
+		public async Task<IReadOnlyCollection<DiscordChannel>> GetChannelsAsync(ulong guildId)
+		{
+			var guild = await GetGuildAsync(guildId);
+
+			try
+			{
+				return await guild.GetChannelsAsync();
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"Error while getting all guild's channels, [guildId]=[{guildId}]\n{e}");
+				return null;
+			}
+		}
 		#endregion
 
 		#region Guilds
 		public async Task<DiscordGuild> GetGuildAsync(ulong guildId)
 		{
-			return await _client.GetGuildAsync(guildId);
+			try
+			{
+				return await _client.GetGuildAsync(guildId);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"Error while getting guild, [guildId]=[{guildId}]:\n{e}");
+				return null;
+			}
 		}
 		#endregion
 
 		#region Users
-		public async Task<DiscordUser> GetUserAsync(ulong id) => await _client.GetUserAsync(id);
-		public async Task<DiscordMember> GetUserInGuildAsync(ulong guildId, ulong userId) => await (await GetGuildAsync(guildId)).GetMemberAsync(userId);
+		public async Task<DiscordUser> GetUserAsync(ulong userId)
+		{
+			try
+			{
+				return await _client.GetUserAsync(userId);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"Error while getting user, [userId]=[{userId}]\n{e}");
+				return null;
+			}
+		}
+
+		public async Task<DiscordMember> GetMemberAsync(ulong guildId, ulong memberId)
+		{
+			var guild = await GetGuildAsync(guildId);
+
+			try
+			{
+				return await guild.GetMemberAsync(memberId);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"Error while getting guild's member, [guildId]=[{guildId}], [memberId]=[{memberId}]\n{e}");
+				return null;
+			}
+		}
 		#endregion
 
 		#region Reactions
@@ -176,11 +248,23 @@ namespace DiscordBot
 
 		public async Task SetReactionAsync(DiscordMessage message, DiscordEmoji reaction)
 		{
+			if (message == null)
+			{
+				throw new ArgumentNullException(nameof(message));
+			}
+
+			if (reaction == null)
+			{
+				throw new ArgumentNullException(nameof(reaction));
+			}
+
 			await message.CreateReactionAsync(reaction);
 		}
 
 		public DiscordEmoji GetReactionByName(string name)
 		{
+			if (name.IsNullOrEmpty()) return null;
+
 			return DiscordEmoji.FromName(_client, name);
 		}
 		#endregion
@@ -199,7 +283,7 @@ namespace DiscordBot
 			{
 				Timeout = TimeSpan.FromMinutes(5)
 			});
-
+			
 			_client.ModalSubmitted += async (s, e) => await e.Interaction.DeferAsync(true);
 		}
 
