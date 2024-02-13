@@ -1,6 +1,7 @@
 ﻿using DiscordBot.Configs.Rules;
 using DiscordBot.Extensions;
 using DiscordBot.Server.Commands.ModalForms;
+using DSharpPlus.Entities;
 
 namespace DiscordBot.Server.Commands
 {
@@ -44,11 +45,12 @@ namespace DiscordBot.Server.Commands
 			oldSection.SetDescription(description);
 			oldSection.SetName(name);
 
-			if (oldSection.Number != number) RulesConfig.MoveSection(oldSection, number);
+			var numberChanged = oldSection.Number != number;
+			if (numberChanged) RulesConfig.MoveSection(oldSection, number);
 
 			RulesConfig.Save();
 
-			await UpdateMessages();
+			await UpdateMessages(numberChanged, numberChanged ? 0 : number);
 
 			return new CommandResult(true, "Раздел успешно изменён.");
 		}
@@ -68,7 +70,8 @@ namespace DiscordBot.Server.Commands
 
 			RulesConfig.Save();
 
-			await UpdateMessages();
+			var sectionNumbersToUpdate = RulesConfig.Sections.Where(section => section.Number >= number).Select(section => section.Number).ToArray();
+			await UpdateMessages(editingSectionsNumbers: sectionNumbersToUpdate);
 
 			return new CommandResult(true, "Раздел успешно удалён.");
 		}
@@ -92,7 +95,7 @@ namespace DiscordBot.Server.Commands
 			RulesConfig.Sections[sectionNumber - 1].AddRule(rule);
 			RulesConfig.Save();
 
-			await UpdateMessages();
+			await UpdateMessages(editingSectionsNumbers: sectionNumber);
 
 			return new CommandResult(true, "Правило успешно добавлено.");
 		}
@@ -120,6 +123,8 @@ namespace DiscordBot.Server.Commands
 				oldRule.AddNote(note);
 			}
 
+			var sectionNumberChanged = oldRule.SectionNumber != sectionNumber;
+			var oldSectionNumber = oldRule.SectionNumber;
 			if (oldRule.SectionNumber == sectionNumber && oldRule.Number != ruleNumber)
 			{
 				var currentSection = RulesConfig.Sections[sectionNumber - 1];
@@ -129,6 +134,7 @@ namespace DiscordBot.Server.Commands
 			{
 				RulesConfig.Sections[oldRule.SectionNumber - 1].RemoveRule(oldRule);
 
+				oldRule.SetSectionNumber(sectionNumber);
 				oldRule.SetNumber(ruleNumber);
 				oldRule.SetSubNumber(ruleSubNumber);
 
@@ -137,7 +143,8 @@ namespace DiscordBot.Server.Commands
 
 			RulesConfig.Save();
 
-			await UpdateMessages();
+			var editingSectionsNumbers = sectionNumberChanged ? new int[] { oldSectionNumber, oldRule.SectionNumber } : new int[] { oldRule.SectionNumber };
+			await UpdateMessages(editingSectionsNumbers: editingSectionsNumbers);
 
 			return new CommandResult(true, "Правило успешно изменено.");
 		}
@@ -152,7 +159,7 @@ namespace DiscordBot.Server.Commands
 
 			RulesConfig.Save();
 
-			await UpdateMessages();
+			await UpdateMessages(editingSectionsNumbers: sectionNumber);
 
 			return new CommandResult(true, "Правило успешно удалено.");
 		}
@@ -179,22 +186,17 @@ namespace DiscordBot.Server.Commands
 			return new CommandResult(true);
 		}
 
-		public async Task UpdateMessages()
+		public async Task UpdateMessages(bool fullUpdate = false, params int[] editingSectionsNumbers)
 		{
 			if (!RulesConfig.Sections.Any()) return;
 
 			var channelToSend = await _bot.GetChannelAsync(RulesConfig.RulesChannelId);
-			if (RulesConfig.Sections.Any(section => section.MessageIds == null || section.MessageIds?.Count == 0))
+			if (fullUpdate || RulesConfig.Sections.Any(section => section.MessageIds == null || section.MessageIds?.Count == 0))
 			{
+				ClearSectionsMessages(channelToSend);
+
 				foreach (var section in RulesConfig.Sections)
 				{
-					foreach (var oldMessageId in section.MessageIds)
-					{
-						await _bot.DeleteMessageAsync(channelToSend, oldMessageId);
-					}
-
-					section.ClearMessageIds();
-
 					var messagesToSend = section.GenerateMessagesToSend();
 					foreach (var message in messagesToSend)
 					{
@@ -209,27 +211,41 @@ namespace DiscordBot.Server.Commands
 
 			if (RulesConfig.Sections.Any(section => section.MessageIds.Count != section.GenerateMessagesToSend().Count))
 			{
-				foreach (var section in RulesConfig.Sections)
-				{
-					foreach (var messageId in section.MessageIds)
-					{
-						await _bot.DeleteMessageAsync(RulesConfig.RulesChannelId, messageId);
-					}
+				ClearSectionsMessages(channelToSend);
 
-					section.ClearMessageIds();
-				}
-
-				await UpdateMessages();
+				await UpdateMessages(true);
 				return;
-			}
+			}		
 
+			foreach (var editingSectionNumber in editingSectionsNumbers)
+			{
+				if (editingSectionNumber <= 0 || editingSectionNumber > RulesConfig.Sections.Count) return;
+
+				var editingSection = RulesConfig.Sections[editingSectionNumber - 1];
+				var messagesToUpdate = editingSection.GenerateMessagesToSend();
+				for (int i = 0; i < editingSection.MessageIds.Count; i++)
+				{
+					var result = await _bot.EditMessageAsync(channelToSend, editingSection.MessageIds[i], messagesToUpdate[i].Content, messagesToUpdate[i].Embeds.ToList());
+					if (result == null)
+					{
+						editingSection.RemoveMessageId(editingSection.MessageIds[i]);
+						await UpdateMessages();
+						return;
+					}
+				}
+			}
+		}
+
+		private async Task ClearSectionsMessages(DiscordChannel channel)
+		{
 			foreach (var section in RulesConfig.Sections)
 			{
-				var messagesToUpdate = section.GenerateMessagesToSend();
-				for (int i = 0; i < section.MessageIds.Count; i++)
+				foreach (var oldMessageId in section?.MessageIds)
 				{
-					await _bot.EditMessageAsync(channelToSend, section.MessageIds[i], messagesToUpdate[i].Content, messagesToUpdate[i].Embeds.ToList());
+					await _bot.DeleteMessageAsync(channel, oldMessageId);
 				}
+
+				section.ClearMessageIds();
 			}
 		}
 

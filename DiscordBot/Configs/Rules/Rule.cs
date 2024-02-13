@@ -36,7 +36,7 @@ namespace DiscordBot.Configs.Rules
 			SetName(name);
 			SetPunishment(punishment);
 
-			if (notes == null) return;
+			if (notes == null || !notes.Any()) return;
 
  			foreach (var note in notes)
 			{
@@ -46,28 +46,28 @@ namespace DiscordBot.Configs.Rules
 
 		public void SetSectionNumber(int sectionNumber)
 		{
-			if (sectionNumber <= 0) throw new Exception($"Номер раздела правил не может быть меньше нуля или равен нулю, [{nameof(sectionNumber)}]=[{sectionNumber}].");
+			if (sectionNumber <= 0) throw new ArgumentException($"Номер раздела правил не может быть меньше нуля или равен нулю, [{nameof(sectionNumber)}]=[{sectionNumber}].");
 
 			SectionNumber = sectionNumber;
 		}
 
 		public void SetNumber(int number)
 		{
-			if (number <= 0) throw new Exception($"Номер правила не может быть меньше нуля или равен нулю, [{nameof(number)}]=[{number}].");
+			if (number <= 0) throw new ArgumentException($"Номер правила не может быть меньше нуля или равен нулю, [{nameof(number)}]=[{number}].");
 
 			Number = number;
 		}
 
 		public void SetSubNumber(int subNumber)
 		{
-			if (subNumber < 0) throw new Exception($"Номер подпункта правила не может быть меньше нуля, [{nameof(subNumber)}]=[{subNumber}].");
+			if (subNumber < 0) throw new ArgumentException($"Номер подпункта правила не может быть меньше нуля, [{nameof(subNumber)}]=[{subNumber}].");
 
 			SubNumber = subNumber;
 		}
 
 		public void SetName(string name)
 		{
-			if (name.IsNullOrEmpty()) throw new Exception($"Имя правила не может быть пустым или null, [{nameof(name)}]=[{name}].");
+			if (name.IsNullOrEmpty()) throw new ArgumentException($"Имя правила не может быть пустым или null, [{nameof(name)}]=[{name}].");
 
 			Name = name;
 		}
@@ -81,7 +81,7 @@ namespace DiscordBot.Configs.Rules
 
 		public void AddNote(string note)
 		{
-			if (note.IsNullOrEmpty()) throw new Exception($"Примечание не может быть пустым или null, [{nameof(note)}]=[{note}].");
+			if (note.IsNullOrEmpty()) throw new ArgumentException($"Примечание не может быть пустым или null, [{nameof(note)}]=[{note}].");
 
 			_notes.Add(note);
 		}

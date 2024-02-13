@@ -101,11 +101,11 @@ namespace DiscordBot.Server.Commands
 			await SendCommandExecutionResult(context, result);
 		}
 
-		public async Task Update(InteractionContext context)
+		public async Task Update(InteractionContext context, bool fullUpdate = false)
 		{
 			await context.DeferAsync(true);
 
-			await CommandsManager.UpdateMessages();
+			await CommandsManager.UpdateMessages(fullUpdate);
 
 			await SendCommandExecutionResult(context, new CommandResult(true, "Список правил успешно обновлен."));
 		}

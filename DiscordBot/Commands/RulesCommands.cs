@@ -55,9 +55,10 @@ namespace DiscordBot.Commands
 		}
 
 		[SlashCommand("update", "Обновить список правил.", false)]
-		public async Task Update(InteractionContext context)
+		public async Task Update(InteractionContext context, 
+			[Option(nameof(fullUpdate), "Обновить полностью (удалить старые сообщения и отправить новые).")] bool fullUpdate = false)
 		{
-			await _serviceManager.GetServerService(context.Guild.Id).ServerRulesCommands.Update(context);
+			await _serviceManager.GetServerService(context.Guild.Id).ServerRulesCommands.Update(context, fullUpdate);
 		}
 	}
 }

@@ -61,11 +61,6 @@ namespace DiscordBot.Configs.Rules
 			for (int i = 0; i < _sections.Count; i++)
 			{
 				_sections[i].SetNumber(i + 1);
-
-				foreach (var rule in _sections[i].Rules)
-				{
-					rule.SetSectionNumber(i + 1);
-				}
 			}
 		}
 	}

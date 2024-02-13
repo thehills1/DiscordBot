@@ -47,14 +47,19 @@ namespace DiscordBot.Configs.Rules
 
 		public void SetNumber(int number)
 		{
-			if (number <= 0) throw new Exception($"Номер раздела не может быть меньше нуля или равен нулю, [{nameof(number)}]=[{number}].");
+			if (number <= 0) throw new ArgumentException($"Номер раздела не может быть меньше нуля или равен нулю, [{nameof(number)}]=[{number}].");
 
 			Number = number;
+
+			foreach (var rule in _rules)
+			{
+				rule.SetSectionNumber(number);
+			}
 		}
 
 		public void SetName(string name)
 		{
-			if (name.IsNullOrEmpty()) throw new Exception($"Имя раздела не может быть пустым или null, [{nameof(name)}]=[{name}].");
+			if (name.IsNullOrEmpty()) throw new ArgumentException($"Имя раздела не может быть пустым или null, [{nameof(name)}]=[{name}].");
 
 			Name = name;
 		}
@@ -135,6 +140,11 @@ namespace DiscordBot.Configs.Rules
 		public void AddMessageId(ulong messageId)
 		{
 			_messageIds.Add(messageId);
+		}
+
+		public void RemoveMessageId(ulong messageId)
+		{
+			_messageIds.Remove(messageId);
 		}
 
 		public void ClearMessageIds()
