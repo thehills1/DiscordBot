@@ -12,7 +12,7 @@ namespace DiscordBot.Commands.AutocompleteProviders
 
 			foreach (var section in rules.Sections)
 			{
-				Choices.Add(new DiscordAutoCompleteChoice($"{section.Number}.{section.Name}", section.Number.ToString()));
+				Choices.Add(new DiscordAutoCompleteChoice($"{section.Number}. {section.Name}", section.Number.ToString()));
 			}
 
 			return Choices;

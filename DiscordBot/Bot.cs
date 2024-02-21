@@ -48,11 +48,11 @@ namespace DiscordBot
 
 			try
 			{
-				return await channel.GetMessageAsync(messageId);
+				return await channel.GetMessageAsync(messageId, true);
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine($"Error while getting message, [messageId]=[{messageId}]:\n{e}");
+				Console.WriteLine($"Error while getting message, [channelId]=[{channel.Id}], [messageId]=[{messageId}]:\n{e}");
 				return null;
 			}
 		}
@@ -148,6 +148,15 @@ namespace DiscordBot
 				Console.WriteLine($"Error while deleting message, [messageId]=[{message.Id}]:\n{e}");
 				return;
 			}
+		}
+		#endregion
+
+		#region Roles
+		public async Task<DiscordRole> GetRoleAsync(ulong guildId, ulong roleId)
+		{
+			var guild = await GetGuildAsync(guildId);
+
+			return guild.GetRole(roleId);
 		}
 		#endregion
 

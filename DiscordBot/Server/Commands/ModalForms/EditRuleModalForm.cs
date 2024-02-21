@@ -30,7 +30,7 @@ namespace DiscordBot.Server.Commands.ModalForms
 					.WithTitle(formTitle)
 					.AddComponents(new TextInputComponent("Номер раздела и правила:", SectionAndRuleNumberCustomId, "Номер раздела и правила через точку.", sectionAndRuleNumber))
 					.AddComponents(new TextInputComponent("Подпункт правила:", RuleSubNumberCustomId, value: ruleSubNumber, required: false))
-					.AddComponents(new TextInputComponent("Название правила:", RuleNameCustomId, value: ruleName))
+					.AddComponents(new TextInputComponent("Название правила:", RuleNameCustomId, value: ruleName, style: TextInputStyle.Paragraph))
 					.AddComponents(new TextInputComponent("Мера наказания:", RulePunishmentCustomId, value: rulePunishment, required: false))
 					.AddComponents(
 					new TextInputComponent(

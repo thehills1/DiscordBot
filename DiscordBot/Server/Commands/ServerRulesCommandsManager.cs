@@ -2,6 +2,7 @@
 using DiscordBot.Extensions;
 using DiscordBot.Server.Commands.ModalForms;
 using DSharpPlus.Entities;
+using DSharpPlus.SlashCommands;
 
 namespace DiscordBot.Server.Commands
 {
@@ -100,13 +101,13 @@ namespace DiscordBot.Server.Commands
 			return new CommandResult(true, "Правило успешно добавлено.");
 		}
 
-		public async Task<CommandResult> TryEditRule(Rule oldRule, IReadOnlyDictionary<string, string> formValues)
+		public async Task<CommandResult> TryEditRule(Rule rule, IReadOnlyDictionary<string, string> formValues)
 		{
 			var rawSectionAndRuleNumbers = formValues[EditRuleModalForm.SectionAndRuleNumberCustomId];
-			var result = CheckFullRuleNumber(rawSectionAndRuleNumbers, out var sectionNumber, out var ruleNumber, out _, true);
+			var result = CheckFullRuleNumber(rawSectionAndRuleNumbers, out var newSectionNumber, out var newRuleNumber, out _, true);
 			if (!result.Success) return result;
 
-			result = CheckRuleSubNumber(formValues[EditRuleModalForm.RuleSubNumberCustomId], out var ruleSubNumber);
+			result = CheckRuleSubNumber(formValues[EditRuleModalForm.RuleSubNumberCustomId], out var newRuleSubNumber);
 			if (!result.Success) return result;
 			
 			var ruleName = formValues[EditRuleModalForm.RuleNameCustomId];
@@ -114,36 +115,36 @@ namespace DiscordBot.Server.Commands
 			var notes = formValues[EditRuleModalForm.RuleNotesCustomId];
 			var notesList = notes.IsNullOrEmpty() ? new List<string>() : notes.Split("\n").ToList();
 			
-			oldRule.SetName(ruleName);
-			oldRule.SetPunishment(rulePunishment);
+			rule.SetName(ruleName);
+			rule.SetPunishment(rulePunishment);
 
-			oldRule.ClearNotes();
+			rule.ClearNotes();
 			foreach (var note in notesList)
 			{
-				oldRule.AddNote(note);
+				rule.AddNote(note);
 			}
 
-			var sectionNumberChanged = oldRule.SectionNumber != sectionNumber;
-			var oldSectionNumber = oldRule.SectionNumber;
-			if (oldRule.SectionNumber == sectionNumber && oldRule.Number != ruleNumber)
+			var sectionNumberChanged = rule.SectionNumber != newSectionNumber;
+			var oldSectionNumber = rule.SectionNumber;
+			if (sectionNumberChanged)
 			{
-				var currentSection = RulesConfig.Sections[sectionNumber - 1];
-				currentSection.MoveRule(oldRule, ruleNumber, ruleSubNumber);
-			}
+				RulesConfig.Sections[rule.SectionNumber - 1].RemoveRule(rule);
+
+				rule.SetSectionNumber(newSectionNumber);
+				rule.SetNumber(newRuleNumber);
+				rule.SetSubNumber(newRuleSubNumber);
+
+				RulesConfig.Sections[newSectionNumber - 1].AddRule(rule);
+			}	
 			else
 			{
-				RulesConfig.Sections[oldRule.SectionNumber - 1].RemoveRule(oldRule);
-
-				oldRule.SetSectionNumber(sectionNumber);
-				oldRule.SetNumber(ruleNumber);
-				oldRule.SetSubNumber(ruleSubNumber);
-
-				RulesConfig.Sections[sectionNumber - 1].AddRule(oldRule);
+				var currentSection = RulesConfig.Sections[newSectionNumber - 1];
+				currentSection.UpdateRule(rule, newRuleNumber, newRuleSubNumber);
 			}
 
 			RulesConfig.Save();
 
-			var editingSectionsNumbers = sectionNumberChanged ? new int[] { oldSectionNumber, oldRule.SectionNumber } : new int[] { oldRule.SectionNumber };
+			var editingSectionsNumbers = sectionNumberChanged ? new int[] { oldSectionNumber, rule.SectionNumber } : new int[] { rule.SectionNumber };
 			await UpdateMessages(editingSectionsNumbers: editingSectionsNumbers);
 
 			return new CommandResult(true, "Правило успешно изменено.");
@@ -200,7 +201,7 @@ namespace DiscordBot.Server.Commands
 			var channelToSend = await _bot.GetChannelAsync(RulesConfig.RulesChannelId);
 			if (fullUpdate || RulesConfig.Sections.Any(section => section.MessageIds == null || section.MessageIds?.Count == 0))
 			{
-				ClearSectionsMessages(channelToSend);
+				await ClearSectionsMessages(channelToSend);
 
 				foreach (var section in RulesConfig.Sections)
 				{
@@ -218,9 +219,9 @@ namespace DiscordBot.Server.Commands
 
 			if (RulesConfig.Sections.Any(section => section.MessageIds.Count != section.GenerateMessagesToSend().Count))
 			{
-				ClearSectionsMessages(channelToSend);
-
+				await ClearSectionsMessages(channelToSend);
 				await UpdateMessages(true);
+
 				return;
 			}		
 
@@ -247,13 +248,15 @@ namespace DiscordBot.Server.Commands
 		{
 			foreach (var section in RulesConfig.Sections)
 			{
-				foreach (var oldMessageId in section?.MessageIds)
+				foreach (var oldMessageId in section.MessageIds)
 				{
 					await _bot.DeleteMessageAsync(channel, oldMessageId);
 				}
 
 				section.ClearMessageIds();
 			}
+
+			RulesConfig.Save();
 		}
 
 		private CommandResult CheckFullRuleNumber(string rawFullRuleNumbers, out int sectionNumber, out int ruleNumber, out int ruleSubNumber, bool checkRuleExists = false)
