@@ -17,5 +17,7 @@ namespace DiscordBot.Commands
 		Task RemoveRule(InteractionContext context, string rule);
 
 		Task Update(InteractionContext context, bool fullUpdate = false);
+
+		Task GenerateForumText(InteractionContext context);
 	}
 }

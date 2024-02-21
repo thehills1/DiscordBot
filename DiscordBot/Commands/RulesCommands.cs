@@ -60,5 +60,11 @@ namespace DiscordBot.Commands
 		{
 			await _serviceManager.GetServerService(context.Guild.Id).ServerRulesCommands.Update(context, fullUpdate);
 		}
+
+		[SlashCommand("generatetoforum", "Сгенерировать текстовый вид правил для форума.", false)]
+		public async Task GenerateForumText(InteractionContext context)
+		{
+			await _serviceManager.GetServerService(context.Guild.Id).ServerRulesCommands.GenerateForumText(context);
+		}
 	}
 }

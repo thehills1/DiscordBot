@@ -109,5 +109,14 @@ namespace DiscordBot.Server.Commands
 
 			await SendCommandExecutionResult(context, new CommandResult(true, "Список правил успешно обновлен."));
 		}
+
+		public async Task GenerateForumText(InteractionContext context)
+		{
+			await context.DeferAsync(true);
+
+			var result = CommandsManager.GenerateForumText(context);
+
+			await SendCommandExecutionResult(context, result);
+		}
 	}
 }

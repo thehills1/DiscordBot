@@ -7,6 +7,15 @@ namespace DiscordBot.Configs.Rules
 {
 	public class Rule
 	{
+		[JsonIgnore]
+		public string FullNumber => SubNumber == 0 ? $"{SectionNumber}.{Number}" : $"{SectionNumber}.{Number}.{SubNumber}";
+
+		[JsonIgnore]
+		public string FullNumberWithBracket => $"{FullNumber}) ";
+
+		[JsonIgnore]
+		public string NotesTitle => $"Примечания к правилу {FullNumber}:";
+
 		[JsonProperty]
 		public int SectionNumber { get; private set; }
 
@@ -26,7 +35,7 @@ namespace DiscordBot.Configs.Rules
 		public ReadOnlyCollection<string> Notes => new ReadOnlyCollection<string>(_notes);
 
 		[JsonProperty(nameof(Notes))]
-		private List<string> _notes = new();
+		private List<string> _notes = new();	
 
 		public Rule(int sectionNumber, int number, string name, int subNumber = 0, string punishment = null, List<string> notes = null)
 		{
@@ -35,19 +44,15 @@ namespace DiscordBot.Configs.Rules
 			SetSubNumber(subNumber);
 			SetName(name);
 			SetPunishment(punishment);
-
 			if (notes == null || !notes.Any()) return;
-
- 			foreach (var note in notes)
+			foreach (var note in notes)
 			{
 				AddNote(note);
 			}
 		}
-
 		public void SetSectionNumber(int sectionNumber)
 		{
 			if (sectionNumber <= 0) throw new ArgumentException($"Номер раздела правил не может быть меньше нуля или равен нулю, [{nameof(sectionNumber)}]=[{sectionNumber}].");
-
 			SectionNumber = sectionNumber;
 		}
 
@@ -99,15 +104,14 @@ namespace DiscordBot.Configs.Rules
 		public override string ToString()
 		{
 			var sb = new StringBuilder();
-			var ruleNumber = SubNumber == 0 ? $"{SectionNumber}.{Number}" : $"{SectionNumber}.{Number}.{SubNumber}";
-			sb.AppendLine($"**{ruleNumber}) {Name}**");
+			sb.AppendLine($"**{FullNumberWithBracket}{Name}**");
 
 			if (!Punishment.IsNullOrEmpty()) sb.AppendLine(Punishment);
 
 			if (_notes?.Count > 0)
 			{
 				sb.AppendLine();
-				sb.AppendLine($"Примечания к правилу {ruleNumber}:");
+				sb.AppendLine(NotesTitle);
 
 				for (int i = 1; i <= _notes.Count; i++)
 				{

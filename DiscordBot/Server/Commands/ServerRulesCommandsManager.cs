@@ -186,6 +186,13 @@ namespace DiscordBot.Server.Commands
 			return new CommandResult(true);
 		}
 
+		public CommandResult GenerateForumText(InteractionContext context)
+		{
+			RulesConfig.GenerateForumText(_bot, context.Guild);
+
+			return new CommandResult(true, "Файл успешно сгенерирован.");
+		}
+
 		public async Task UpdateMessages(bool fullUpdate = false, params int[] editingSectionsNumbers)
 		{
 			if (!RulesConfig.Sections.Any()) return;

@@ -10,6 +10,9 @@ namespace DiscordBot.Configs.Rules
 		private const int MaxEmbedContentLength = 4096;
 		private const int MaxMessageContentLength = 6000;
 
+		[JsonIgnore]
+		public string FullName => $"Раздел {Number}. {Name}";
+
 		[JsonProperty]
 		public string Description { get; private set; }
 
@@ -105,7 +108,7 @@ namespace DiscordBot.Configs.Rules
 			}
 		}
 
-		public void MoveRule(Rule rule, int newNumber, int newSubNumber)
+		public void UpdateRule(Rule rule, int newNumber, int newSubNumber)
 		{
 			if (!_rules.Contains(rule)) return;
 			if (_rules.IndexOf(rule) + 1 == rule.Number && rule.SubNumber == newSubNumber) return;
@@ -158,7 +161,7 @@ namespace DiscordBot.Configs.Rules
 
 			var totalCharacters = 0;
 			var charactersInEmbed = 0;
-			var embedTitle = $"__**Раздел {Number}. {Name}**__";
+			var embedTitle = $"__**{FullName}**__";
 
 			var currentMessage = new DiscordMessageBuilder();
 			if (!Description.IsNullOrEmpty()) currentMessage = currentMessage.WithContent(Description);
