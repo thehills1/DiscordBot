@@ -56,6 +56,14 @@ namespace DiscordBot.Commands
 				.WarnModerator(context, user);
 		}
 
+		[SlashCommand("unmwarn", "Снять предупреждение модератору.", false)]
+		public async Task UnWarnModerator(InteractionContext context,
+			[Option(nameof(user), "Пользователь")] DiscordUser user)
+		{
+			await _serviceManager.GetServerService(context.Guild.Id).ServerGlobalCommands
+				.UnWarnModerator(context, user);
+		}
+
 		[SlashCommand("editinfo", "Изменить информацию о модераторе.", false)]
 		public async Task EditModeratorInfo(
 			InteractionContext context, 

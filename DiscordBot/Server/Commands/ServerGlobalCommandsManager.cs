@@ -95,6 +95,8 @@ namespace DiscordBot.Server.Commands
 			}
 
 			table.PermissionLevel = permissionLevel;
+			table.PromotionDate = DateTime.Now;
+
 			_databaseManager.AddOrUpdateTableDB(table);
 
 			return new CommandResult(true, $"Вы изменили уровень модератора {user.Mention} на **{permissionLevel}.**");
@@ -113,6 +115,19 @@ namespace DiscordBot.Server.Commands
 			_databaseManager.AddOrUpdateTableDB(table);
 
 			message = $"Вы выдали модератору {user.Mention} предупреждение. " +
+				$"\nТекущее количество предупреждений модератора: **{table.Reprimands}/{ModeratorTable.ReprimandsLimit}.**";
+			return new CommandResult(true, message);
+		}
+
+		public CommandResult TryUnWarnModerator(DiscordUser user)
+		{
+			if (CheckModeratorTableNotExists(user.Id, out var table, out var message)) return new CommandResult(false, message);
+			if (table.Reprimands == 0) return new CommandResult(false, "У данного модератора 0 выговоров.");
+
+			table.Reprimands--;
+			_databaseManager.AddOrUpdateTableDB(table);
+
+			message = $"Вы сняли модератору {user.Mention} предупреждение. " +
 				$"\nТекущее количество предупреждений модератора: **{table.Reprimands}/{ModeratorTable.ReprimandsLimit}.**";
 			return new CommandResult(true, message);
 		}
@@ -303,15 +318,23 @@ namespace DiscordBot.Server.Commands
 					sortedActions.Add(table.ServerName, new Dictionary<ModeratorTable, int>());
 				}
 
-				sortedActions[table.ServerName].Add(table, moderatorAction.Value);
-
-				if (table.PermissionLevel <= PermissionLevel.Curator 
-					&& moderatorAction.Value >= _salaryConfig.ActionsPerWeekToSalary * weeks)
+				var coeff = table.Reprimands switch
 				{
-					if (!totalActions.TryAdd(table.ServerName, moderatorAction.Value))
-					{
-						totalActions[table.ServerName] += moderatorAction.Value;
-					}
+					0 => 1f,
+					1 => 0.75f,
+					2 => 0f
+				};
+
+				var moderatorActions = (int) (moderatorAction.Value * coeff);
+				sortedActions[table.ServerName].Add(table, moderatorActions);
+
+				if (table.PermissionLevel > PermissionLevel.Curator 
+					|| moderatorActions < _salaryConfig.ActionsPerWeekToSalary * weeks
+					|| coeff == 0f) continue;
+
+				if (!totalActions.TryAdd(table.ServerName, moderatorActions))
+				{
+					totalActions[table.ServerName] += moderatorActions;
 				}
 			}
 
@@ -348,6 +371,7 @@ namespace DiscordBot.Server.Commands
 						BankNumber = moderatorTable.BankNumber,
 						ActionsCount = moderatorActions.Value,
 						Salary = salary,
+						Reprimands = moderatorTable.Reprimands,
 						PeriodStartDate = periodStartDate,
 						PeriodEndDate = periodEndDate
 					};

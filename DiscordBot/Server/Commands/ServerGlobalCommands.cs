@@ -64,6 +64,15 @@ namespace DiscordBot.Server.Commands
 			SendCommandExecutionResult(context, result);
 		}
 
+		public async Task UnWarnModerator(InteractionContext context, DiscordUser user)
+		{
+			await context.DeferAsync(true);
+
+			var result = _commandsManager.TryUnWarnModerator(user);
+
+			SendCommandExecutionResult(context, result);
+		}
+
 		public async Task EditModeratorInfo(InteractionContext context, DiscordUser user, string property, string value)
 		{
 			await context.DeferAsync(true);

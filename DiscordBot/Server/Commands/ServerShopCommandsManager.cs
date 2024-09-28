@@ -174,13 +174,15 @@ namespace DiscordBot.Server.Commands
 
 		public async Task<CommandResult> TryUpdateListAsync(ServerName serverName)
 		{
-			var content = "**Актуальный список магазинов:**";
 			var embeds = new List<DiscordEmbed>();
 			var tables = await _databaseManager.GetMultyDataDBAsync<ShopTable>(table => table.ServerName == serverName);
 			foreach (var table in tables)
 			{
 				embeds.Add(GenerateShopInfo(table));
 			}
+
+			var content = $"**Свободно слотов для открытия магазинов: {_shopsConfig.MaxShopsPerServer - tables.Count}\n\nАктуальный список магазинов:**";
+			if (tables.Count == 0) content += "\n\nМагазины отсутствуют.";
 
 			lock (_updateSync)
 			{
@@ -199,7 +201,15 @@ namespace DiscordBot.Server.Commands
 				}
 				else
 				{
-					_bot.EditMessageAsync(_shopsConfig.InfoChannels[serverName], messageTable.MessageId, content, embeds).Wait();
+					if (embeds.Count == 0)
+					{
+						_bot.DeleteMessageAsync(_shopsConfig.InfoChannels[serverName], messageTable.MessageId).Wait();
+						return TryUpdateListAsync(serverName).Result;
+					}
+					else
+					{
+						_bot.EditMessageAsync(_shopsConfig.InfoChannels[serverName], messageTable.MessageId, content, embeds).Wait();
+					}				
 				}
 			}	
 

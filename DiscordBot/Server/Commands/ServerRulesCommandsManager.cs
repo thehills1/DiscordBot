@@ -1,4 +1,5 @@
-﻿using DiscordBot.Configs.Rules;
+﻿using DiscordBot.Configs;
+using DiscordBot.Configs.Rules;
 using DiscordBot.Extensions;
 using DiscordBot.Server.Commands.ModalForms;
 using DSharpPlus.Entities;
@@ -9,12 +10,15 @@ namespace DiscordBot.Server.Commands
 	public class ServerRulesCommandsManager
 	{
 		private readonly Bot _bot;
+		private readonly ServerConfig _serverConfig;
 
 		public RulesConfig RulesConfig { get; }
 
-		public ServerRulesCommandsManager(Bot bot, RulesConfig rules)
+		public ServerRulesCommandsManager(Bot bot, ServerConfig serverConfig, RulesConfig rules)
 		{
 			_bot = bot;
+			_serverConfig = serverConfig;
+
 			RulesConfig = rules;
 		}
 
@@ -189,7 +193,9 @@ namespace DiscordBot.Server.Commands
 
 		public CommandResult GenerateForumText(InteractionContext context)
 		{
-			RulesConfig.GenerateForumText(_bot, context.Guild);
+			var filePath = RulesConfig.GenerateForumText(_bot, context.Guild);
+
+			_bot.SendMessageAsync(_serverConfig.HeadModChannelId, file: new FileStream(filePath, FileMode.Open));
 
 			return new CommandResult(true, "Файл успешно сгенерирован.");
 		}
@@ -223,8 +229,8 @@ namespace DiscordBot.Server.Commands
 				await UpdateMessages(true);
 
 				return;
-			}		
-
+			}
+			
 			foreach (var editingSectionNumber in editingSectionsNumbers)
 			{
 				if (editingSectionNumber <= 0 || editingSectionNumber > RulesConfig.Sections.Count) return;

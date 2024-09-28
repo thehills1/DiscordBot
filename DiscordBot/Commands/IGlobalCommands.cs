@@ -26,6 +26,8 @@ namespace DiscordBot.Commands
 
 		Task WarnModerator(InteractionContext context, DiscordUser user);
 
+		Task UnWarnModerator(InteractionContext context, DiscordUser user);
+
 		Task EditModeratorInfo(InteractionContext context, DiscordUser user, string property, string value);
 
 		Task SendStaffInfo(InteractionContext context, DiscordChannel channel, bool allTables);

@@ -59,7 +59,7 @@ namespace DiscordBot.Configs.Rules
 			UpdateNumbers();
 		}
 
-		public void GenerateForumText(Bot bot, DiscordGuild currentGuild)
+		public string GenerateForumText(Bot bot, DiscordGuild currentGuild)
 		{
 			var filePath = $"Rules to forum {DateTime.Now.ToString().Replace(":", "-").Replace("/", ".")}.txt";
 			using (var writer = new StreamWriter(new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write)))
@@ -99,7 +99,12 @@ namespace DiscordBot.Configs.Rules
 
 					writer.WriteLine("[/SIZE]");
 				}
+
+				writer.WriteLine();
+				writer.WriteLine($"Дата последнего обновления правил: {DateTime.Now.ToShortDateString()}");
 			}
+
+			return filePath;
 		}
 
 		private void UpdateNumbers()
@@ -115,7 +120,8 @@ namespace DiscordBot.Configs.Rules
 			foreach (var channelMention in Regex.Matches(input, @"<#[0-9]{1,}>").Select(match => match.Value))
 			{
 				var channelId = ulong.Parse(channelMention.Substring(2, channelMention.Length - 3));
-				input = input.Replace(channelMention, bot.GetChannelAsync(channelId).Result.Name);
+				var channelName = bot.GetChannelAsync(channelId).Result.Name.Split('│').Last();
+				input = input.Replace(channelMention, channelName);
 			}
 		}
 

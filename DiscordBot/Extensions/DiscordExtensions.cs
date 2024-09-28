@@ -12,8 +12,6 @@ namespace DiscordBot.Extensions
 
 		public static string GetMention(this ulong id, MentionType mentionType)
 		{
-			if (id.ToString().Length != 18) return null;
-
 			return mentionType switch
 			{
 				MentionType.Role => $"<@&{id}>",
