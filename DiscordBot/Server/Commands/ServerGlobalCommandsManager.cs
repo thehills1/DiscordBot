@@ -178,7 +178,7 @@ namespace DiscordBot.Server.Commands
 				tables.Add(new TableCollection<DismissedModeratorTable>(dismissedModTables));
 			}
 
-			var fileName = Path.Combine(_serverContext.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".")}.xlsx");
+			var fileName = Path.Combine(_serverContext.ModeratorsWorksheetsPath, $"moderators {DateTime.Now.ToString().Replace(":", ".").Replace("/", ".")}.xlsx");
 			var messageContent = "Актуальный список модераторов:";
 
 			var oldMessage = _infoMessagesConfig.SentMessagesIds?.FirstOrDefault(msg => msg.ChannelId == channel.Id && msg.AllTables == allTables);
