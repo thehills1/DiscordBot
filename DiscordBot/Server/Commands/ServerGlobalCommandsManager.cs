@@ -234,7 +234,7 @@ namespace DiscordBot.Server.Commands
 			var sortedActions = SortAndRemoveExtraModeratorsActions(moderatorsActions, weeks, out var totalActions);
 			var salaryTables = CalculateSalary(sortedActions, weeks, totalActions, periodStartDate, periodEndDate);
 
-			var datesString = $"{periodStartDate.ToShortDateString()} - {periodEndDate.ToShortDateString()}";
+			var datesString = $"{periodStartDate.ToString("dd.MM.yyyy")} - {periodEndDate.ToString("dd.MM.yyyy")}";
 
 			var fileName = Path.Combine(_serverContext.SalaryWorksheetsPath, $"salary {datesString}.xlsx");
 
